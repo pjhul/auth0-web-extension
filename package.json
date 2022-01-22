@@ -12,5 +12,8 @@
   "bugs": {
     "url": "https://github.com/pjhul/auth0-web-extension/issues"
   },
-  "homepage": "https://github.com/pjhul/auth0-web-extension#readme"
+  "homepage": "https://github.com/pjhul/auth0-web-extension#readme",
+  "devDependencies": {
+    "typescript": "^4.5.5"
+  }
 }
