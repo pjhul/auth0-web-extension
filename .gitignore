@@ -6,5 +6,6 @@
 
 #/.yarn/cache
 /.pnp.*
+/node_modules/
 
 /.editorconfig
