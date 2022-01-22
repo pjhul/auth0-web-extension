@@ -1,0 +1,16 @@
+{
+  "name": "auth0-web-extension",
+  "version": "0.0.1-beta.1",
+  "description": "A javascript library to perform authentication in a web extension with Auth0",
+  "packageManager": "yarn@3.1.1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pjhul/auth0-web-extension.git"
+  },
+  "author": "Paul Hultgren <@pjhul>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pjhul/auth0-web-extension/issues"
+  },
+  "homepage": "https://github.com/pjhul/auth0-web-extension#readme"
+}
