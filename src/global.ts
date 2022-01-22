@@ -1,5 +1,4 @@
-/** If you need to send custom parameters to the Authorization Server, make sure to use the original parameter name.  */
-
+import { verifyIdToken } from "./jwt"
 /**
  * @ignore
  */
@@ -114,29 +113,31 @@ export interface Auth0ClientOptions extends BaseLoginOptions {
    * (when using [custom domains](https://auth0.com/docs/custom-domains))
    */
   domain: string;
+
   /**
    * The issuer to be used for validation of JWTs, optionally defaults to the domain above
    */
   issuer?: string;
+
   /**
    * The Client ID found on your Application settings page
    */
   client_id: string;
+
   /**
    * The default URL where Auth0 will redirect your browser to with
    * the authentication result. It must be whitelisted in
    * the "Allowed Callback URLs" field in your Auth0 Application's
-   * settings. If not provided here, it should be provided in the other
-   * methods that provide authentication.
+   * settings. Must be provided here as we have no fallback to window.location.origin
    */
-  redirect_uri?: string;
+  redirect_uri: string;
+
   /**
    * The value in seconds used to account for clock skew in JWT expirations.
    * Typically, this value is no more than a minute or two at maximum.
    * Defaults to 60s.
    */
   leeway?: number;
-
 
   /**
    *
@@ -233,3 +234,191 @@ export interface Auth0ClientOptions extends BaseLoginOptions {
  * The possible locations where tokens can be stored
  */
 export type CacheLocation = 'memory' | 'localstorage';
+
+export interface AuthorizeOptions extends BaseLoginOptions {
+  response_type: string;
+  response_mode: string;
+  redirect_uri: string;
+  nonce: string;
+  state: string;
+  scope: string;
+  code_challenge: string;
+  code_challenge_method: string;
+}
+
+export interface GetTokenSilentlyOptions {
+  /**
+   * When `true`, ignores the cache and always sends a
+   * request to Auth0.
+   */
+  ignoreCache?: boolean;
+
+  /**
+   * There's no actual redirect when getting a token silently,
+   * but, according to the spec, a `redirect_uri` param is required.
+   * Auth0 uses this parameter to validate that the current `origin`
+   * matches the `redirect_uri` `origin` when sending the response.
+   * It must be whitelisted in the "Allowed Web Origins" in your
+   * Auth0 Application's settings.
+   */
+  redirect_uri?: string;
+
+  /**
+   * The scope that was used in the authentication request
+   */
+  scope?: string;
+
+  /**
+   * The audience that was used in the authentication request
+   */
+  audience?: string;
+
+  /** A maximum number of seconds to wait before declaring the background /authorize call as failed for timeout
+   * Defaults to 60s.
+   */
+  timeoutInSeconds?: number;
+
+  /**
+   * If true, the full response from the /oauth/token endpoint (or the cache, if the cache was used) is returned
+   * (minus `refresh_token` if one was issued). Otherwise, just the access token is returned.
+   *
+   * The default is `false`.
+   */
+  detailedResponse?: boolean;
+
+  /**
+   * If you need to send custom parameters to the Authorization Server,
+   * make sure to use the original parameter name.
+   */
+  [key: string]: any;
+}
+
+/**
+ * @ignore
+ */
+export interface JWTVerifyOptions {
+  iss: string;
+  aud: string;
+  id_token: string;
+  nonce?: string;
+  leeway?: number;
+  max_age?: number;
+  organizationId?: string;
+  now?: number;
+}
+
+/**
+ * @ignore
+ */
+export interface IdToken {
+  __raw: string;
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  middle_name?: string;
+  nickname?: string;
+  preferred_username?: string;
+  profile?: string;
+  picture?: string;
+  website?: string;
+  email?: string;
+  email_verified?: boolean;
+  gender?: string;
+  birthdate?: string;
+  zoneinfo?: string;
+  locale?: string;
+  phone_number?: string;
+  phone_number_verified?: boolean;
+  address?: string;
+  updated_at?: string;
+  iss?: string;
+  aud?: string;
+  exp?: number;
+  nbf?: number;
+  iat?: number;
+  jti?: string;
+  azp?: string;
+  nonce?: string;
+  auth_time?: string;
+  at_hash?: string;
+  c_hash?: string;
+  acr?: string;
+  amr?: string;
+  sub_jwk?: string;
+  cnf?: string;
+  sid?: string;
+  org_id?: string;
+  [key: string]: any;
+}
+
+export class User {
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  middle_name?: string;
+  nickname?: string;
+  preferred_username?: string;
+  profile?: string;
+  picture?: string;
+  website?: string;
+  email?: string;
+  email_verified?: boolean;
+  gender?: string;
+  birthdate?: string;
+  zoneinfo?: string;
+  locale?: string;
+  phone_number?: string;
+  phone_number_verified?: boolean;
+  address?: string;
+  updated_at?: string;
+  sub?: string;
+  [key: string]: any;
+}
+
+export interface AuthenticationResult {
+  state: string
+  code?: string
+  error?: string
+  error_description?: string
+}
+
+export interface TokenEndpointOptions {
+  baseUrl: string;
+  client_id: string;
+  grant_type: string;
+  timeout?: number;
+  auth0Client: any;
+  useFormData?: boolean;
+  [key: string]: any;
+}
+
+export type TokenEndpointResponse = {
+  id_token: string;
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  scope?: string;
+}
+
+export interface OAuthTokenOptions extends TokenEndpointOptions {
+  code_verifier: string;
+  code: string;
+  redirect_uri: string;
+  audience: string;
+  scope: string;
+}
+
+export type GetTokenSilentlyResult = TokenEndpointResponse & {
+  decodedToken: ReturnType<typeof verifyIdToken>;
+  scope: string;
+  oauthTokenScope: string;
+  audience: string;
+}
+
+export type FetchOptions = {
+  method?: string;
+  headers?: Record<string, string>;
+  credentials?: 'include' | 'omit';
+  body?: string;
+  signal?: AbortSignal;
+};

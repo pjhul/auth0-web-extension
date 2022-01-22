@@ -129,6 +129,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/webextension-polyfill@npm:^0.8.2":
+  version: 0.8.2
+  resolution: "@types/webextension-polyfill@npm:0.8.2"
+  checksum: 59d12c51f2d92515346d1e99682ff44a0d9b5791575f9ece9d46a98ac3f04ee79ed1a820ada884f31cd687edc1110913c80a12b537aa4a7d474a61b008e03e27
+  languageName: node
+  linkType: hard
+
 "abbrev@npm:1":
   version: 1.1.1
   resolution: "abbrev@npm:1.1.1"
@@ -197,10 +204,12 @@ __metadata:
     "@rollup/plugin-commonjs": ^21.0.1
     "@rollup/plugin-node-resolve": ^13.1.3
     "@rollup/plugin-typescript": ^8.3.0
+    "@types/webextension-polyfill": ^0.8.2
     rimraf: ^3.0.2
     rollup: ^2.66.0
     tslib: ^2.3.1
     typescript: ^4.5.5
+    webextension-polyfill: ^0.8.0
   languageName: unknown
   linkType: soft
 
@@ -1109,6 +1118,13 @@ __metadata:
   version: 1.0.2
   resolution: "util-deprecate@npm:1.0.2"
   checksum: 474acf1146cb2701fe3b074892217553dfcf9a031280919ba1b8d651a068c9b15d863b7303cb15bd00a862b498e6cf4ad7b4a08fb134edd5a6f7641681cb54a2
+  languageName: node
+  linkType: hard
+
+"webextension-polyfill@npm:^0.8.0":
+  version: 0.8.0
+  resolution: "webextension-polyfill@npm:0.8.0"
+  checksum: 56286e6216e15834fdcdc3dcf611000d96b49c9d925de3d657eb5f1e294074180dd3efe78a0966223eb311ac3a0ac5fdf71d324b836bf05724455ffd6c7c98c3
   languageName: node
   linkType: hard
 
