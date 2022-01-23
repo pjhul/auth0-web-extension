@@ -36,6 +36,8 @@ import {
   AuthenticationResult,
   GetEntryFromCacheOptions,
   GetTokenSilentlyVerboseResult,
+  User,
+  GetUserOptions,
 } from "./global"
 
 /**
@@ -157,6 +159,51 @@ export default class Auth0Client {
 
   private _authorizeUrl(authorizeOptions: AuthorizeOptions) {
     return this._url(`/authorize?${createQueryParams(authorizeOptions)}`);
+  }
+
+  /**
+   * ```js
+   * const user = await auth0.getUser();
+   * ```
+   *
+   * Returns the user information if available (decoded from the `id_token`).
+   *
+   * If you provide an audience or scope, they should match an existing Access Token
+   * (the SDK stores a corresponding ID Token with every Access Token, and uses the
+   * scope and audience to look up the ID Token)
+   *
+   * @typeparam TUser The type to return, has to extend {@link User}.
+   * @param options
+   */
+  public async getUser<TUser extends User>(
+    options: GetUserOptions = {}
+  ): Promise<TUser | undefined> {
+    const audience = options.audience || this.options.audience || "default";
+    const scope = getUniqueScopes(this.defaultScope, this.scope, options.scope);
+
+    const cache = await this.cacheManager.get(
+      new CacheKey({
+        client_id: this.options.client_id,
+        audience,
+        scope,
+      })
+    );
+
+    return cache?.decodedToken?.user as TUser | undefined;
+  }
+
+  /**
+   * ```js
+   * const isAuthenticated = await auth0.isAuthenticated();
+   * ```
+   *
+   * Returns `true` if there's valid information stored,
+   * otherwise returns `false`.
+   *
+   */
+  public async isAuthenticated() {
+    const user = await this.getUser();
+    return Boolean(user);
   }
 
   public async getTokenSilently(

@@ -1,4 +1,4 @@
-import { Auth0ClientOptions, CacheLocation, GetTokenSilentlyOptions, GetTokenSilentlyVerboseResult } from "./global";
+import { Auth0ClientOptions, CacheLocation, GetTokenSilentlyOptions, GetTokenSilentlyVerboseResult, User, GetUserOptions } from "./global";
 /**
  * Auth0 SDK for Background Scripts in a Web Extension
  */
@@ -16,6 +16,31 @@ export default class Auth0Client {
     private _url;
     private _getParams;
     private _authorizeUrl;
+    /**
+     * ```js
+     * const user = await auth0.getUser();
+     * ```
+     *
+     * Returns the user information if available (decoded from the `id_token`).
+     *
+     * If you provide an audience or scope, they should match an existing Access Token
+     * (the SDK stores a corresponding ID Token with every Access Token, and uses the
+     * scope and audience to look up the ID Token)
+     *
+     * @typeparam TUser The type to return, has to extend {@link User}.
+     * @param options
+     */
+    getUser<TUser extends User>(options?: GetUserOptions): Promise<TUser | undefined>;
+    /**
+     * ```js
+     * const isAuthenticated = await auth0.isAuthenticated();
+     * ```
+     *
+     * Returns `true` if there's valid information stored,
+     * otherwise returns `false`.
+     *
+     */
+    isAuthenticated(): Promise<boolean>;
     getTokenSilently(options: GetTokenSilentlyOptions & {
         detailedResponse: true;
     }): Promise<GetTokenSilentlyVerboseResult>;

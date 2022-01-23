@@ -2134,6 +2134,64 @@ var Auth0Client = /** @class */ (function () {
     Auth0Client.prototype._authorizeUrl = function (authorizeOptions) {
         return this._url("/authorize?".concat(createQueryParams(authorizeOptions)));
     };
+    /**
+     * ```js
+     * const user = await auth0.getUser();
+     * ```
+     *
+     * Returns the user information if available (decoded from the `id_token`).
+     *
+     * If you provide an audience or scope, they should match an existing Access Token
+     * (the SDK stores a corresponding ID Token with every Access Token, and uses the
+     * scope and audience to look up the ID Token)
+     *
+     * @typeparam TUser The type to return, has to extend {@link User}.
+     * @param options
+     */
+    Auth0Client.prototype.getUser = function (options) {
+        var _a;
+        if (options === void 0) { options = {}; }
+        return __awaiter(this, void 0, void 0, function () {
+            var audience, scope, cache;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        audience = options.audience || this.options.audience || "default";
+                        scope = getUniqueScopes(this.defaultScope, this.scope, options.scope);
+                        return [4 /*yield*/, this.cacheManager.get(new CacheKey({
+                                client_id: this.options.client_id,
+                                audience: audience,
+                                scope: scope,
+                            }))];
+                    case 1:
+                        cache = _b.sent();
+                        return [2 /*return*/, (_a = cache === null || cache === void 0 ? void 0 : cache.decodedToken) === null || _a === void 0 ? void 0 : _a.user];
+                }
+            });
+        });
+    };
+    /**
+     * ```js
+     * const isAuthenticated = await auth0.isAuthenticated();
+     * ```
+     *
+     * Returns `true` if there's valid information stored,
+     * otherwise returns `false`.
+     *
+     */
+    Auth0Client.prototype.isAuthenticated = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var user;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.getUser()];
+                    case 1:
+                        user = _a.sent();
+                        return [2 /*return*/, Boolean(user)];
+                }
+            });
+        });
+    };
     // TODO: Return verbose response if detailedResponse = true
     /**
      * Fetches a new access token

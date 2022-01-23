@@ -246,6 +246,17 @@ export interface AuthorizeOptions extends BaseLoginOptions {
   code_challenge_method: string;
 }
 
+export interface GetUserOptions {
+  /**
+   * The scope that was used in the authentication request
+   */
+  scope?: string;
+  /**
+   * The audience that was used in the authentication request
+   */
+  audience?: string;
+}
+
 export interface GetTokenSilentlyOptions {
   /**
    * When `true`, ignores the cache and always sends a
