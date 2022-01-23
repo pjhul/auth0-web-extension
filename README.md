@@ -35,6 +35,7 @@ In your manifest, you will need to add a couple items. It is important to make s
   "content_scripts": [
     {
       "matches": [
+        "...",
         "<YOUR_REDIRECT_URI>" // Make sure your redirect url is included
       ],
       "all_frames": true, // All frames must be set to true
