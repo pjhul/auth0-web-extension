@@ -2090,6 +2090,7 @@ var _a;
 var Auth0Client = /** @class */ (function () {
     function Auth0Client(options) {
         // TODO: validate crypto library
+        // TODO: find a way to validate we are running in a background script
         var _a, _b;
         this.options = options;
         if (options.cache && options.cacheLocation) {
