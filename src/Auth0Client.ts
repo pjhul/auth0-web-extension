@@ -13,23 +13,36 @@ import { oauthToken } from "./api"
 import { verifyIdToken } from "./jwt"
 
 import {
+  InMemoryCache,
+  ICache,
+  CacheKeyManifest,
+  CacheManager,
+  CacheKey,
+} from "./cache"
+
+import {
   DEFAULT_SCOPE,
   DEFAULT_NOW_PROVIDER,
+  CACHE_LOCATION_MEMORY,
 } from "./constants"
 
 import {
   BaseLoginOptions,
   Auth0ClientOptions,
+  CacheLocation,
   AuthorizeOptions,
   GetTokenSilentlyOptions,
   GetTokenSilentlyResult,
   AuthenticationResult,
+  GetEntryFromCacheOptions,
+  GetTokenSilentlyVerboseResult,
 } from "./global"
 
 /**
  * Auth0 SDK for Background Scripts in a Web Extension
  */
 export default class Auth0Client {
+  private cacheManager: CacheManager;
   private customOptions: BaseLoginOptions
   private domainUrl: string
   private tokenIssuer: string
@@ -37,12 +50,45 @@ export default class Auth0Client {
   private scope: string | undefined
   private nowProvider: () => number | Promise<number>
 
+  cacheLocation: CacheLocation | null
+
   constructor(private options: Auth0ClientOptions) {
     // TODO: validate crypto library
+    // TODO: find a way to validate we are running in a background script
+
+    if(options.cache && options.cacheLocation) {
+      console.warn(
+        "Both `cache` and `cacheLocation` options have been specified in the Auth0Client configuration; ignoring `cacheLocation` and using `cache`."
+      );
+    }
+
+    let cache: ICache
+    if(options.cache) {
+      cache = options.cache;
+      this.cacheLocation = null;
+    } else {
+      this.cacheLocation = options.cacheLocation || CACHE_LOCATION_MEMORY;
+
+      const factory = cacheFactory(this.cacheLocation);
+
+      if(!factory) {
+        throw new Error(`Invalid cache location "${this.cacheLocation}"`);
+      }
+
+      cache = factory();
+    }
 
     this.scope = this.options.scope;
 
     this.nowProvider = this.options.nowProvider || DEFAULT_NOW_PROVIDER;
+
+    this.cacheManager = new CacheManager(
+      cache,
+      !cache.allKeys
+        ? new CacheKeyManifest(cache, this.options.client_id)
+        : null,
+      this.nowProvider,
+    )
 
     this.domainUrl = getDomain(this.options.domain);
     this.tokenIssuer = getTokenIssuer(this.options.issuer, this.domainUrl);
@@ -113,6 +159,14 @@ export default class Auth0Client {
     return this._url(`/authorize?${createQueryParams(authorizeOptions)}`);
   }
 
+  public async getTokenSilently(
+    options: GetTokenSilentlyOptions & { detailedResponse: true }
+  ): Promise<GetTokenSilentlyVerboseResult>
+
+  public async getTokenSilently(
+    options?: GetTokenSilentlyOptions,
+  ): Promise<string>
+
   // TODO: Return verbose response if detailedResponse = true
 
   /**
@@ -126,12 +180,11 @@ export default class Auth0Client {
    */
   public async getTokenSilently(
     options: GetTokenSilentlyOptions = {},
-  ): Promise<string> {
+  ): Promise<string | GetTokenSilentlyVerboseResult> {
     // FIXME: Should use keyed singlePromise like is auth0-spa-js
-    return this._getTokenSilently({
+    return await this._getTokenSilently({
       audience: this.options.audience,
-      // TODO: Support caching and change this to default false
-      ignoreCache: true,
+      ignoreCache: false,
       ...options,
       scope: getUniqueScopes(this.defaultScope, this.scope, options.scope),
     });
@@ -139,12 +192,20 @@ export default class Auth0Client {
 
   private async _getTokenSilently(
     options: GetTokenSilentlyOptions = {},
-  ): Promise<string> {
+  ): Promise<string | GetTokenSilentlyVerboseResult> {
     const { ignoreCache, ...getTokenOptions } = options;
 
-    if(!ignoreCache) {
-      // TODO: Support caching
-      throw "We currently do not support caching, set the ignoreCache option to true";
+    if(!ignoreCache && getTokenOptions.scope) {
+      const entry = await this._getEntryFromCache({
+        scope: getTokenOptions.scope,
+        audience: getTokenOptions.audience || "default",
+        client_id: this.options.client_id,
+        getDetailedEntry: options.detailedResponse,
+      });
+
+      if(entry) {
+        return entry;
+      }
     }
 
     // TODO: Acquire lock
@@ -153,7 +214,23 @@ export default class Auth0Client {
       ? await this._getTokenUsingRefreshToken(getTokenOptions)
       : await this._getTokenFromIfFrame(getTokenOptions);
 
-    // TODO: Save to cache and cookies
+    await this.cacheManager.set({
+      client_id: this.options.client_id,
+      ...authResult,
+    })
+
+    // TODO: Save to cookies
+
+    if(options.detailedResponse) {
+      const { id_token, access_token, oauthTokenScope, expires_in } = authResult;
+
+      return {
+        id_token,
+        access_token,
+        ...(oauthTokenScope ? { scope: oauthTokenScope } : null),
+        expires_in,
+      };
+    }
 
     return authResult.access_token;
   }
@@ -293,6 +370,41 @@ export default class Auth0Client {
       now,
     });
   }
+
+  private async _getEntryFromCache({
+    scope,
+    audience,
+    client_id,
+    getDetailedEntry = false,
+  }: GetEntryFromCacheOptions): Promise<string | GetTokenSilentlyVerboseResult | undefined> {
+    const entry = await this.cacheManager.get(
+      new CacheKey({
+        scope,
+        audience,
+        client_id,
+      }),
+      60
+    );
+
+    if(entry && entry.access_token) {
+      if(getDetailedEntry) {
+        const { id_token, access_token, oauthTokenScope, expires_in } = entry;
+
+        if(!id_token || !expires_in) {
+          return undefined;
+        }
+
+        return {
+          id_token,
+          access_token,
+          ...(oauthTokenScope ? { scope: oauthTokenScope } : null),
+          expires_in,
+        };
+      } else {
+        return entry.access_token;
+      }
+    }
+  }
 }
 
 const parseNumber = (value: any): number | undefined => {
@@ -309,6 +421,14 @@ const getDomain = (domainUrl: string) => {
   } else {
     return domainUrl;
   }
+}
+
+const cacheLocationBuilders: Record<string, () => ICache> = {
+  [CACHE_LOCATION_MEMORY]: () => new InMemoryCache().enclosedCache,
+}
+
+const cacheFactory = (location: string) => {
+  return cacheLocationBuilders[location];
 }
 
 const getTokenIssuer = (issuer: string | undefined, domainUrl: string) => {

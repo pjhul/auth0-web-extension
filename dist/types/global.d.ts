@@ -1,3 +1,4 @@
+import { ICache } from "./cache";
 import { verifyIdToken } from "./jwt";
 /**
  * @ignore
@@ -127,12 +128,11 @@ export interface Auth0ClientOptions extends BaseLoginOptions {
      * Read more about [changing storage options in the Auth0 docs](https://auth0.com/docs/libraries/auth0-single-page-app-sdk#change-storage-options)
      */
     /** NOTE: We do not support a cache location other than memory right now */
-    cacheLocation?: unknown;
+    cacheLocation?: CacheLocation;
     /**
      * Specify a custom cache implementation to use for token storage and retrieval. This setting takes precedence over `cacheLocation` if they are both specified.
      */
-    /** NOTE: We do not support custom cache implementations right now */
-    cache?: unknown;
+    cache?: ICache;
     /**
      * If true, refresh tokens are used to fetch new access tokens from the Auth0 server. If false, the legacy technique of using a hidden iframe and the `authorization_code` grant with `prompt=none` is used.
      * The default setting is `false`.
@@ -200,9 +200,9 @@ export interface Auth0ClientOptions extends BaseLoginOptions {
     nowProvider?: () => Promise<number> | number;
 }
 /**
- * The possible locations where tokens can be stored
+ * The possible locations where tokens can be stored. Only in memory caching is supported right now
  */
-export declare type CacheLocation = 'memory' | 'localstorage';
+export declare type CacheLocation = 'memory';
 export interface AuthorizeOptions extends BaseLoginOptions {
     response_type: string;
     response_mode: string;
@@ -332,6 +332,12 @@ export declare class User {
     sub?: string;
     [key: string]: any;
 }
+export declare type GetEntryFromCacheOptions = {
+    scope: string;
+    audience: string;
+    client_id: string;
+    getDetailedEntry?: boolean;
+};
 export interface AuthenticationResult {
     state: string;
     code?: string;
@@ -374,4 +380,5 @@ export declare type FetchOptions = {
     body?: string;
     signal?: AbortSignal;
 };
+export declare type GetTokenSilentlyVerboseResult = Omit<TokenEndpointResponse, "refresh_token">;
 export {};

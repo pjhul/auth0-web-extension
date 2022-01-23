@@ -1417,6 +1417,7 @@ var bufferToBase64UrlEncoded = function (input) {
 };
 
 var DEFAULT_SCOPE = "openid profile email";
+var CACHE_LOCATION_MEMORY = "memory";
 var DEFAULT_FETCH_TIMEOUT_MS = 10000;
 var DEFAULT_SILENT_TOKEN_RETRY_COUNT = 3;
 var DEFAULT_NOW_PROVIDER = function () { return Date.now(); };
@@ -1745,6 +1746,344 @@ var verifyIdToken = function (options) {
     return decoded;
 };
 
+var InMemoryCache = /** @class */ (function () {
+    function InMemoryCache() {
+        this.enclosedCache = (function () {
+            var cache = {};
+            return {
+                set: function (key, entry) {
+                    cache[key] = entry;
+                },
+                get: function (key) {
+                    var cacheEntry = cache[key];
+                    if (!cacheEntry) {
+                        return null;
+                    }
+                    return cacheEntry;
+                },
+                remove: function (key) {
+                    delete cache[key];
+                },
+                allKeys: function () {
+                    return Object.keys(cache);
+                }
+            };
+        })();
+    }
+    return InMemoryCache;
+}());
+
+var CACHE_KEY_PREFIX = '@@auth0webext@@';
+var CacheKey = /** @class */ (function () {
+    function CacheKey(data, prefix) {
+        if (prefix === void 0) { prefix = CACHE_KEY_PREFIX; }
+        this.prefix = prefix;
+        this.client_id = data.client_id;
+        this.scope = data.scope;
+        this.audience = data.audience;
+    }
+    /**
+     * Converts this `CacheKey` instance into a string for use in a cache
+     * @returns A string representation of the key
+     */
+    CacheKey.prototype.toKey = function () {
+        return "".concat(this.prefix, "::").concat(this.client_id, "::").concat(this.audience, "::").concat(this.scope);
+    };
+    /**
+     * Converts a cache key string into a `CacheKey` instance.
+     * @param key The key to convert
+     * @returns An instance of `CacheKey`
+     */
+    CacheKey.fromKey = function (key) {
+        var _a = key.split('::'), prefix = _a[0], client_id = _a[1], audience = _a[2], scope = _a[3];
+        if (!prefix || !client_id || !scope || !audience)
+            return null;
+        return new CacheKey({ client_id: client_id, scope: scope, audience: audience }, prefix);
+    };
+    /**
+     * Utility function to build a `CacheKey` instance from a cache entry
+     * @param entry The entry
+     * @returns An instance of `CacheKey`
+     */
+    CacheKey.fromCacheEntry = function (entry) {
+        var scope = entry.scope, audience = entry.audience, client_id = entry.client_id;
+        return new CacheKey({
+            scope: scope,
+            audience: audience,
+            client_id: client_id
+        });
+    };
+    return CacheKey;
+}());
+
+var DEFAULT_EXPIRY_ADJUSTMENT_SECONDS = 0;
+var CacheManager = /** @class */ (function () {
+    function CacheManager(cache, keyManifest, nowProvider) {
+        this.cache = cache;
+        if (keyManifest) {
+            this.keyManifest = keyManifest;
+        }
+        this.nowProvider = nowProvider || DEFAULT_NOW_PROVIDER;
+    }
+    CacheManager.prototype.get = function (cacheKey, expiryAdjustmentSeconds) {
+        var _a;
+        if (expiryAdjustmentSeconds === void 0) { expiryAdjustmentSeconds = DEFAULT_EXPIRY_ADJUSTMENT_SECONDS; }
+        return __awaiter(this, void 0, void 0, function () {
+            var wrappedEntry, keys, matchedKey, now, nowSeconds;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0: return [4 /*yield*/, this.cache.get(cacheKey.toKey())];
+                    case 1:
+                        wrappedEntry = _b.sent();
+                        if (!!wrappedEntry) return [3 /*break*/, 4];
+                        return [4 /*yield*/, this.getCacheKeys()];
+                    case 2:
+                        keys = _b.sent();
+                        if (!keys)
+                            return [2 /*return*/];
+                        matchedKey = this.matchExistingCacheKey(cacheKey, keys);
+                        if (!matchedKey)
+                            return [2 /*return*/];
+                        return [4 /*yield*/, this.cache.get(matchedKey)];
+                    case 3:
+                        wrappedEntry = _b.sent();
+                        _b.label = 4;
+                    case 4:
+                        // If we still don't have an entry, exit.
+                        if (!wrappedEntry) {
+                            return [2 /*return*/];
+                        }
+                        return [4 /*yield*/, this.nowProvider()];
+                    case 5:
+                        now = _b.sent();
+                        nowSeconds = Math.floor(now / 1000);
+                        if (!(wrappedEntry.expiresAt - expiryAdjustmentSeconds < nowSeconds)) return [3 /*break*/, 10];
+                        if (!wrappedEntry.body.refresh_token) return [3 /*break*/, 7];
+                        wrappedEntry.body = {
+                            refresh_token: wrappedEntry.body.refresh_token
+                        };
+                        return [4 /*yield*/, this.cache.set(cacheKey.toKey(), wrappedEntry)];
+                    case 6:
+                        _b.sent();
+                        return [2 /*return*/, wrappedEntry.body];
+                    case 7: return [4 /*yield*/, this.cache.remove(cacheKey.toKey())];
+                    case 8:
+                        _b.sent();
+                        return [4 /*yield*/, ((_a = this.keyManifest) === null || _a === void 0 ? void 0 : _a.remove(cacheKey.toKey()))];
+                    case 9:
+                        _b.sent();
+                        return [2 /*return*/];
+                    case 10: return [2 /*return*/, wrappedEntry.body];
+                }
+            });
+        });
+    };
+    CacheManager.prototype.set = function (entry) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function () {
+            var cacheKey, wrappedEntry;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        cacheKey = new CacheKey({
+                            client_id: entry.client_id,
+                            scope: entry.scope,
+                            audience: entry.audience
+                        });
+                        return [4 /*yield*/, this.wrapCacheEntry(entry)];
+                    case 1:
+                        wrappedEntry = _b.sent();
+                        return [4 /*yield*/, this.cache.set(cacheKey.toKey(), wrappedEntry)];
+                    case 2:
+                        _b.sent();
+                        return [4 /*yield*/, ((_a = this.keyManifest) === null || _a === void 0 ? void 0 : _a.add(cacheKey.toKey()))];
+                    case 3:
+                        _b.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    CacheManager.prototype.clear = function (clientId) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function () {
+            var keys;
+            var _this = this;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0: return [4 /*yield*/, this.getCacheKeys()];
+                    case 1:
+                        keys = _b.sent();
+                        if (!keys)
+                            return [2 /*return*/];
+                        return [4 /*yield*/, keys
+                                .filter(function (key) { return (clientId ? key.includes(clientId) : true); })
+                                .reduce(function (memo, key) { return __awaiter(_this, void 0, void 0, function () {
+                                return __generator(this, function (_a) {
+                                    switch (_a.label) {
+                                        case 0: return [4 /*yield*/, memo];
+                                        case 1:
+                                            _a.sent();
+                                            return [4 /*yield*/, this.cache.remove(key)];
+                                        case 2:
+                                            _a.sent();
+                                            return [2 /*return*/];
+                                    }
+                                });
+                            }); }, Promise.resolve())];
+                    case 2:
+                        _b.sent();
+                        return [4 /*yield*/, ((_a = this.keyManifest) === null || _a === void 0 ? void 0 : _a.clear())];
+                    case 3:
+                        _b.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    /**
+     * Note: only call this if you're sure one of our internal (synchronous) caches are being used.
+     */
+    CacheManager.prototype.clearSync = function (clientId) {
+        var _this = this;
+        var _a, _b;
+        var keys = (_b = (_a = this.cache).allKeys) === null || _b === void 0 ? void 0 : _b.call(_a);
+        if (!keys)
+            return;
+        keys
+            .filter(function (key) { return (clientId ? key.includes(clientId) : true); })
+            .forEach(function (key) {
+            _this.cache.remove(key);
+        });
+    };
+    CacheManager.prototype.wrapCacheEntry = function (entry) {
+        return __awaiter(this, void 0, void 0, function () {
+            var now, expiresInTime, expirySeconds;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.nowProvider()];
+                    case 1:
+                        now = _a.sent();
+                        expiresInTime = Math.floor(now / 1000) + entry.expires_in;
+                        expirySeconds = Math.min(expiresInTime, entry.decodedToken.claims.exp || Infinity);
+                        return [2 /*return*/, {
+                                body: entry,
+                                expiresAt: expirySeconds
+                            }];
+                }
+            });
+        });
+    };
+    CacheManager.prototype.getCacheKeys = function () {
+        var _a, _b;
+        return __awaiter(this, void 0, void 0, function () {
+            var keys, keys;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0:
+                        if (!this.keyManifest) return [3 /*break*/, 2];
+                        return [4 /*yield*/, this.keyManifest.get()];
+                    case 1:
+                        keys = ((_c.sent()) || {}).keys;
+                        return [2 /*return*/, keys || []];
+                    case 2: return [4 /*yield*/, ((_b = (_a = this.cache).allKeys) === null || _b === void 0 ? void 0 : _b.call(_a))];
+                    case 3:
+                        keys = _c.sent();
+                        return [2 /*return*/, keys || []];
+                }
+            });
+        });
+    };
+    /**
+     * Finds the corresponding key in the cache based on the provided cache key.
+     * The keys inside the cache are in the format {prefix}::{client_id}::{audience}::{scope}.
+     * The first key in the cache that satisfies the following conditions is returned
+     *  - `prefix` is strict equal to Auth0's internally configured `keyPrefix`
+     *  - `client_id` is strict equal to the `cacheKey.client_id`
+     *  - `audience` is strict equal to the `cacheKey.audience`
+     *  - `scope` contains at least all the `cacheKey.scope` values
+     *  *
+     * @param keyToMatch The provided cache key
+     * @param allKeys A list of existing cache keys
+     */
+    CacheManager.prototype.matchExistingCacheKey = function (keyToMatch, allKeys) {
+        return allKeys.filter(function (key) {
+            var cacheKey = CacheKey.fromKey(key);
+            var scopeSet = new Set((cacheKey === null || cacheKey === void 0 ? void 0 : cacheKey.scope) && cacheKey.scope.split(' '));
+            var scopesToMatch = keyToMatch.scope.split(' ');
+            var hasAllScopes = (cacheKey === null || cacheKey === void 0 ? void 0 : cacheKey.scope) &&
+                scopesToMatch.reduce(function (acc, current) { return acc && scopeSet.has(current); }, true);
+            return ((cacheKey === null || cacheKey === void 0 ? void 0 : cacheKey.prefix) === CACHE_KEY_PREFIX &&
+                cacheKey.client_id === keyToMatch.client_id &&
+                cacheKey.audience === keyToMatch.audience &&
+                hasAllScopes);
+        })[0];
+    };
+    return CacheManager;
+}());
+
+var CacheKeyManifest = /** @class */ (function () {
+    function CacheKeyManifest(cache, clientId) {
+        this.cache = cache;
+        this.clientId = clientId;
+        this.manifestKey = this.createManifestKeyFrom(this.clientId);
+    }
+    CacheKeyManifest.prototype.add = function (key) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function () {
+            var keys, _b;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0:
+                        _b = Set.bind;
+                        return [4 /*yield*/, this.cache.get(this.manifestKey)];
+                    case 1:
+                        keys = new (_b.apply(Set, [void 0, ((_a = (_c.sent())) === null || _a === void 0 ? void 0 : _a.keys) || []]))();
+                        keys.add(key);
+                        return [4 /*yield*/, this.cache.set(this.manifestKey, {
+                                keys: Array.from(keys.values()),
+                            })];
+                    case 2:
+                        _c.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    CacheKeyManifest.prototype.remove = function (key) {
+        return __awaiter(this, void 0, void 0, function () {
+            var entry, keys;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.cache.get(this.manifestKey)];
+                    case 1:
+                        entry = _a.sent();
+                        if (!entry) return [3 /*break*/, 5];
+                        keys = new Set(entry.keys);
+                        keys.delete(key);
+                        if (!(keys.size > 0)) return [3 /*break*/, 3];
+                        return [4 /*yield*/, this.cache.set(this.manifestKey, { keys: Array.from(keys.values()) })];
+                    case 2: return [2 /*return*/, _a.sent()];
+                    case 3: return [4 /*yield*/, this.cache.remove(this.manifestKey)];
+                    case 4: return [2 /*return*/, _a.sent()];
+                    case 5: return [2 /*return*/];
+                }
+            });
+        });
+    };
+    CacheKeyManifest.prototype.get = function () {
+        return this.cache.get(this.manifestKey);
+    };
+    CacheKeyManifest.prototype.clear = function () {
+        return this.cache.remove(this.manifestKey);
+    };
+    CacheKeyManifest.prototype.createManifestKeyFrom = function (clientId) {
+        return "".concat(CACHE_KEY_PREFIX, "::").concat(clientId);
+    };
+    return CacheKeyManifest;
+}());
+
+var _a;
 /**
  * Auth0 SDK for Background Scripts in a Web Extension
  */
@@ -1753,8 +2092,27 @@ var Auth0Client = /** @class */ (function () {
         // TODO: validate crypto library
         var _a, _b;
         this.options = options;
+        if (options.cache && options.cacheLocation) {
+            console.warn("Both `cache` and `cacheLocation` options have been specified in the Auth0Client configuration; ignoring `cacheLocation` and using `cache`.");
+        }
+        var cache;
+        if (options.cache) {
+            cache = options.cache;
+            this.cacheLocation = null;
+        }
+        else {
+            this.cacheLocation = options.cacheLocation || CACHE_LOCATION_MEMORY;
+            var factory = cacheFactory(this.cacheLocation);
+            if (!factory) {
+                throw new Error("Invalid cache location \"".concat(this.cacheLocation, "\""));
+            }
+            cache = factory();
+        }
         this.scope = this.options.scope;
         this.nowProvider = this.options.nowProvider || DEFAULT_NOW_PROVIDER;
+        this.cacheManager = new CacheManager(cache, !cache.allKeys
+            ? new CacheKeyManifest(cache, this.options.client_id)
+            : null, this.nowProvider);
         this.domainUrl = getDomain(this.options.domain);
         this.tokenIssuer = getTokenIssuer(this.options.issuer, this.domainUrl);
         this.defaultScope = getUniqueScopes("openid", ((_b = (_a = this.options) === null || _a === void 0 ? void 0 : _a.advancedOptions) === null || _b === void 0 ? void 0 : _b.defaultScope) || DEFAULT_SCOPE);
@@ -1789,37 +2147,58 @@ var Auth0Client = /** @class */ (function () {
         if (options === void 0) { options = {}; }
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
-                // FIXME: Should use keyed singlePromise like is auth0-spa-js
-                return [2 /*return*/, this._getTokenSilently(__assign(__assign({ audience: this.options.audience, 
-                        // TODO: Support caching and change this to default false
-                        ignoreCache: true }, options), { scope: getUniqueScopes(this.defaultScope, this.scope, options.scope) }))];
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this._getTokenSilently(__assign(__assign({ audience: this.options.audience, ignoreCache: false }, options), { scope: getUniqueScopes(this.defaultScope, this.scope, options.scope) }))];
+                    case 1: 
+                    // FIXME: Should use keyed singlePromise like is auth0-spa-js
+                    return [2 /*return*/, _a.sent()];
+                }
             });
         });
     };
     Auth0Client.prototype._getTokenSilently = function (options) {
         if (options === void 0) { options = {}; }
         return __awaiter(this, void 0, void 0, function () {
-            var ignoreCache, getTokenOptions, authResult, _a;
+            var ignoreCache, getTokenOptions, entry, authResult, _a, id_token, access_token, oauthTokenScope, expires_in;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
                         ignoreCache = options.ignoreCache, getTokenOptions = __rest(options, ["ignoreCache"]);
-                        if (!ignoreCache) {
-                            // TODO: Support caching
-                            throw "We currently do not support caching, set the ignoreCache option to true";
-                        }
-                        if (!this.options.useRefreshTokens) return [3 /*break*/, 2];
-                        return [4 /*yield*/, this._getTokenUsingRefreshToken(getTokenOptions)];
+                        if (!(!ignoreCache && getTokenOptions.scope)) return [3 /*break*/, 2];
+                        return [4 /*yield*/, this._getEntryFromCache({
+                                scope: getTokenOptions.scope,
+                                audience: getTokenOptions.audience || "default",
+                                client_id: this.options.client_id,
+                                getDetailedEntry: options.detailedResponse,
+                            })];
                     case 1:
-                        _a = _b.sent();
-                        return [3 /*break*/, 4];
-                    case 2: return [4 /*yield*/, this._getTokenFromIfFrame(getTokenOptions)];
+                        entry = _b.sent();
+                        if (entry) {
+                            return [2 /*return*/, entry];
+                        }
+                        _b.label = 2;
+                    case 2:
+                        if (!this.options.useRefreshTokens) return [3 /*break*/, 4];
+                        return [4 /*yield*/, this._getTokenUsingRefreshToken(getTokenOptions)];
                     case 3:
                         _a = _b.sent();
-                        _b.label = 4;
-                    case 4:
+                        return [3 /*break*/, 6];
+                    case 4: return [4 /*yield*/, this._getTokenFromIfFrame(getTokenOptions)];
+                    case 5:
+                        _a = _b.sent();
+                        _b.label = 6;
+                    case 6:
                         authResult = _a;
-                        // TODO: Save to cache and cookies
+                        return [4 /*yield*/, this.cacheManager.set(__assign({ client_id: this.options.client_id }, authResult))
+                            // TODO: Save to cookies
+                        ];
+                    case 7:
+                        _b.sent();
+                        // TODO: Save to cookies
+                        if (options.detailedResponse) {
+                            id_token = authResult.id_token, access_token = authResult.access_token, oauthTokenScope = authResult.oauthTokenScope, expires_in = authResult.expires_in;
+                            return [2 /*return*/, __assign(__assign({ id_token: id_token, access_token: access_token }, (oauthTokenScope ? { scope: oauthTokenScope } : null)), { expires_in: expires_in })];
+                        }
                         return [2 /*return*/, authResult.access_token];
                 }
             });
@@ -1922,6 +2301,36 @@ var Auth0Client = /** @class */ (function () {
             });
         });
     };
+    Auth0Client.prototype._getEntryFromCache = function (_a) {
+        var scope = _a.scope, audience = _a.audience, client_id = _a.client_id, _b = _a.getDetailedEntry, getDetailedEntry = _b === void 0 ? false : _b;
+        return __awaiter(this, void 0, void 0, function () {
+            var entry, id_token, access_token, oauthTokenScope, expires_in;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0: return [4 /*yield*/, this.cacheManager.get(new CacheKey({
+                            scope: scope,
+                            audience: audience,
+                            client_id: client_id,
+                        }), 60)];
+                    case 1:
+                        entry = _c.sent();
+                        if (entry && entry.access_token) {
+                            if (getDetailedEntry) {
+                                id_token = entry.id_token, access_token = entry.access_token, oauthTokenScope = entry.oauthTokenScope, expires_in = entry.expires_in;
+                                if (!id_token || !expires_in) {
+                                    return [2 /*return*/, undefined];
+                                }
+                                return [2 /*return*/, __assign(__assign({ id_token: id_token, access_token: access_token }, (oauthTokenScope ? { scope: oauthTokenScope } : null)), { expires_in: expires_in })];
+                            }
+                            else {
+                                return [2 /*return*/, entry.access_token];
+                            }
+                        }
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
     return Auth0Client;
 }());
 var parseNumber = function (value) {
@@ -1939,6 +2348,12 @@ var getDomain = function (domainUrl) {
     else {
         return domainUrl;
     }
+};
+var cacheLocationBuilders = (_a = {},
+    _a[CACHE_LOCATION_MEMORY] = function () { return new InMemoryCache().enclosedCache; },
+    _a);
+var cacheFactory = function (location) {
+    return cacheLocationBuilders[location];
 };
 var getTokenIssuer = function (issuer, domainUrl) {
     if (issuer) {

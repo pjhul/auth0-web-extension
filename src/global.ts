@@ -1,4 +1,6 @@
+import { ICache } from "./cache"
 import { verifyIdToken } from "./jwt"
+
 /**
  * @ignore
  */
@@ -148,14 +150,12 @@ export interface Auth0ClientOptions extends BaseLoginOptions {
    */
 
   /** NOTE: We do not support a cache location other than memory right now */
-  cacheLocation?: unknown; /* CacheLocation */
+  cacheLocation?: CacheLocation;
 
   /**
    * Specify a custom cache implementation to use for token storage and retrieval. This setting takes precedence over `cacheLocation` if they are both specified.
    */
-
-  /** NOTE: We do not support custom cache implementations right now */
-  cache?: unknown; /* ICache */
+  cache?: ICache;
 
   /**
    * If true, refresh tokens are used to fetch new access tokens from the Auth0 server. If false, the legacy technique of using a hidden iframe and the `authorization_code` grant with `prompt=none` is used.
@@ -231,9 +231,9 @@ export interface Auth0ClientOptions extends BaseLoginOptions {
 }
 
 /**
- * The possible locations where tokens can be stored
+ * The possible locations where tokens can be stored. Only in memory caching is supported right now
  */
-export type CacheLocation = 'memory' | 'localstorage';
+export type CacheLocation = 'memory' /* 'localstorage' */;
 
 export interface AuthorizeOptions extends BaseLoginOptions {
   response_type: string;
@@ -375,6 +375,13 @@ export class User {
   [key: string]: any;
 }
 
+export type GetEntryFromCacheOptions = {
+  scope: string
+  audience: string
+  client_id: string
+  getDetailedEntry?: boolean
+}
+
 export interface AuthenticationResult {
   state: string
   code?: string
@@ -421,4 +428,9 @@ export type FetchOptions = {
   credentials?: 'include' | 'omit';
   body?: string;
   signal?: AbortSignal;
-};
+}
+
+export type GetTokenSilentlyVerboseResult = Omit<
+  TokenEndpointResponse,
+  "refresh_token"
+>
