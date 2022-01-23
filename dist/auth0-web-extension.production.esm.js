@@ -1417,6 +1417,8 @@ var bufferToBase64UrlEncoded = function (input) {
 };
 
 var DEFAULT_SCOPE = "openid profile email";
+var PARENT_PORT_NAME = "auth0-web-extension::parent";
+var CHILD_PORT_NAME = "auth0-web-extension::child";
 var CACHE_LOCATION_MEMORY = "memory";
 var DEFAULT_FETCH_TIMEOUT_MS = 10000;
 var DEFAULT_SILENT_TOKEN_RETRY_COUNT = 3;
@@ -2333,18 +2335,20 @@ var Auth0Client = /** @class */ (function () {
                                 if (!(currentTab_1 === null || currentTab_1 === void 0 ? void 0 : currentTab_1.id)) {
                                     throw "Could not access current tab. Do you have the 'activeTab' permission in your manifest?";
                                 }
-                                var parentPort = browser$1.tabs.connect(currentTab_1.id, { name: "parent" });
+                                var parentPort = browser$1.tabs.connect(currentTab_1.id, { name: PARENT_PORT_NAME });
                                 var handler = function (childPort) {
-                                    childPort.onMessage.addListener(function (message) {
-                                        resolve(message);
-                                        childPort.disconnect();
-                                        parentPort.disconnect();
-                                        browser$1.runtime.onConnect.removeListener(handler);
-                                    });
-                                    childPort.postMessage({
-                                        authorizeUrl: url,
-                                        domainUrl: _this.domainUrl,
-                                    });
+                                    if (childPort.name === CHILD_PORT_NAME) {
+                                        childPort.onMessage.addListener(function (message) {
+                                            resolve(message);
+                                            childPort.disconnect();
+                                            parentPort.disconnect();
+                                            browser$1.runtime.onConnect.removeListener(handler);
+                                        });
+                                        childPort.postMessage({
+                                            authorizeUrl: url,
+                                            domainUrl: _this.domainUrl,
+                                        });
+                                    }
                                 };
                                 browser$1.runtime.onConnect.addListener(handler);
                                 parentPort.postMessage({
@@ -2474,38 +2478,42 @@ var getCustomInitialOptions = function (options) {
 function handleTokenRequest(redirectUri) {
     var _this = this;
     if (window.location.origin === redirectUri) {
-        var port_1 = browser$1.runtime.connect();
-        var handler = function (message) { return __awaiter(_this, void 0, void 0, function () {
+        var port = browser$1.runtime.connect(undefined, { name: CHILD_PORT_NAME });
+        var handler = function (message, port) { return __awaiter(_this, void 0, void 0, function () {
             var authorizeUrl, domainUrl, codeResult;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
+                        if (!(port.name === CHILD_PORT_NAME)) return [3 /*break*/, 2];
                         authorizeUrl = message.authorizeUrl, domainUrl = message.domainUrl;
                         return [4 /*yield*/, runIFrame(authorizeUrl, domainUrl, 60)];
                     case 1:
                         codeResult = _a.sent();
-                        port_1.postMessage(codeResult);
-                        return [2 /*return*/];
+                        port.postMessage(codeResult);
+                        _a.label = 2;
+                    case 2: return [2 /*return*/];
                 }
             });
         }); };
-        port_1.onMessage.addListener(handler);
+        port.onMessage.addListener(handler);
     }
     else {
         browser$1.runtime.onConnect.addListener(function (port) {
-            var handler = function () {
-                var iframe = document.createElement("iframe");
-                iframe.setAttribute("width", "0");
-                iframe.setAttribute("height", "0");
-                iframe.style.display = "none";
-                document.body.appendChild(iframe);
-                iframe.setAttribute("src", redirectUri);
-                port.onMessage.removeListener(handler);
-                port.onDisconnect.addListener(function () {
-                    window.document.body.removeChild(iframe);
-                });
-            };
-            port.onMessage.addListener(handler);
+            if (port.name === PARENT_PORT_NAME) {
+                var handler_1 = function () {
+                    var iframe = document.createElement("iframe");
+                    iframe.setAttribute("width", "0");
+                    iframe.setAttribute("height", "0");
+                    iframe.style.display = "none";
+                    document.body.appendChild(iframe);
+                    iframe.setAttribute("src", redirectUri);
+                    port.onMessage.removeListener(handler_1);
+                    port.onDisconnect.addListener(function () {
+                        window.document.body.removeChild(iframe);
+                    });
+                };
+                port.onMessage.addListener(handler_1);
+            }
         });
     }
 }

@@ -1,5 +1,8 @@
 export const DEFAULT_SCOPE = "openid profile email";
 
+export const PARENT_PORT_NAME = "auth0-web-extension::parent";
+export const CHILD_PORT_NAME = "auth0-web-extension::child";
+
 export const CACHE_LOCATION_MEMORY = "memory";
 
 export const DEFAULT_FETCH_TIMEOUT_MS = 10000;

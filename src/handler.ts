@@ -1,6 +1,11 @@
 import browser from "webextension-polyfill"
 
 import {
+  PARENT_PORT_NAME,
+  CHILD_PORT_NAME,
+} from "./constants"
+
+import {
   AuthenticationResult,
 } from "./global"
 
@@ -12,40 +17,44 @@ import {
 // We can probably pull redirectUri from background script at some point
 export function handleTokenRequest(redirectUri: string) {
   if(window.location.origin === redirectUri) {
-    const port = browser.runtime.connect()
+    const port = browser.runtime.connect(undefined, { name: CHILD_PORT_NAME })
 
-    const handler = async (message: any) => {
-      const { authorizeUrl, domainUrl } = message
+    const handler = async (message: any, port: browser.Runtime.Port) => {
+      if(port.name === CHILD_PORT_NAME) {
+        const { authorizeUrl, domainUrl } = message
 
-      const codeResult = await runIFrame(
-        authorizeUrl,
-        domainUrl,
-        60
-      );
+        const codeResult = await runIFrame(
+          authorizeUrl,
+          domainUrl,
+          60
+        );
 
-      port.postMessage(codeResult);
+        port.postMessage(codeResult);
+      }
     }
 
     port.onMessage.addListener(handler);
   } else {
     browser.runtime.onConnect.addListener(port => {
-      const handler = () => {
-        const iframe = document.createElement("iframe");
+      if(port.name === PARENT_PORT_NAME) {
+        const handler = () => {
+          const iframe = document.createElement("iframe");
 
-        iframe.setAttribute("width", "0");
-        iframe.setAttribute("height", "0");
-        iframe.style.display = "none";
+          iframe.setAttribute("width", "0");
+          iframe.setAttribute("height", "0");
+          iframe.style.display = "none";
 
-        document.body.appendChild(iframe);
-        iframe.setAttribute("src", redirectUri);
+          document.body.appendChild(iframe);
+          iframe.setAttribute("src", redirectUri);
 
-        port.onMessage.removeListener(handler);
-        port.onDisconnect.addListener(() => {
-          window.document.body.removeChild(iframe);
-        });
-      };
+          port.onMessage.removeListener(handler);
+          port.onDisconnect.addListener(() => {
+            window.document.body.removeChild(iframe);
+          });
+        };
 
-      port.onMessage.addListener(handler);
+        port.onMessage.addListener(handler);
+      }
     });
   }
 }

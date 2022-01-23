@@ -24,6 +24,8 @@ import {
   DEFAULT_SCOPE,
   DEFAULT_NOW_PROVIDER,
   CACHE_LOCATION_MEMORY,
+  CHILD_PORT_NAME,
+  PARENT_PORT_NAME,
 } from "./constants"
 
 import {
@@ -357,21 +359,24 @@ export default class Auth0Client {
           throw "Could not access current tab. Do you have the 'activeTab' permission in your manifest?";
         }
 
-        const parentPort = browser.tabs.connect(currentTab.id, { name: "parent" });
+        const parentPort = browser.tabs.connect(currentTab.id, { name: PARENT_PORT_NAME });
 
         const handler = (childPort: browser.Runtime.Port) => {
-          childPort.onMessage.addListener(message => {
-            resolve(message);
-            childPort.disconnect();
-            parentPort.disconnect();
+          if(childPort.name === CHILD_PORT_NAME) {
+            childPort.onMessage.addListener(message => {
+              resolve(message);
 
-            browser.runtime.onConnect.removeListener(handler);
-          });
+              childPort.disconnect();
+              parentPort.disconnect();
 
-          childPort.postMessage({
-            authorizeUrl: url,
-            domainUrl: this.domainUrl,
-          });
+              browser.runtime.onConnect.removeListener(handler);
+            });
+
+            childPort.postMessage({
+              authorizeUrl: url,
+              domainUrl: this.domainUrl,
+            });
+          }
         }
 
         browser.runtime.onConnect.addListener(handler)
