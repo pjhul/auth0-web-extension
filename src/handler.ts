@@ -9,10 +9,28 @@ import {
   GenericError,
 } from "./errors"
 
-export async function handleTokenRequest() {
-  const response = await browser.runtime.sendMessage(undefined, "auth_params");
-  const codeResult = await runIFrame(response.authorizeUrl, response.domainUrl, 60);
-  await browser.runtime.sendMessage(undefined, codeResult);
+export async function handleTokenRequest(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    const conn = browser.runtime.connect(undefined, {
+      name: "handleTokenRequest",
+    });
+
+    const handler = async (message: any) => {
+      if("authorizeUrl" in message && "domainUrl" in message) {
+        const codeResult = await runIFrame(
+          message.authorizeUrl,
+          message.domainUrl,
+          60
+        );
+
+        conn.postMessage(codeResult);
+        resolve();
+      }
+    };
+
+    conn.onMessage.addListener(handler);
+    conn.postMessage("auth_params");
+  })
 }
 
 const runIFrame = async (

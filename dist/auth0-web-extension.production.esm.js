@@ -1852,7 +1852,7 @@ var Auth0Client = /** @class */ (function () {
                         options.timeoutInSeconds || this.options.authorizeTimeoutInSeconds;
                         _a.label = 2;
                     case 2:
-                        _a.trys.push([2, 9, , 10]);
+                        _a.trys.push([2, 8, , 9]);
                         queryOptions = { active: true, currentWindow: true };
                         return [4 /*yield*/, browser$1.tabs.query(queryOptions)];
                     case 3:
@@ -1871,64 +1871,44 @@ var Auth0Client = /** @class */ (function () {
                                     iframe.setAttribute("src", url);
                                 },
                                 args: [params.redirect_uri],
-                            })
-                            // TODO: Eventually do this with a longer lived connction
-                            // TODO: Package this into helper function
-                        ];
+                            })];
                     case 4:
                         _a.sent();
-                        // TODO: Eventually do this with a longer lived connction
-                        // TODO: Package this into helper function
-                        return [4 /*yield*/, new Promise(function (resolve, reject) {
-                                var handler = function (message, sender, sendResponse) {
-                                    // TODO: Verify sender
-                                    if (message === "auth_params") {
-                                        if (sendResponse) {
-                                            // @ts-ignore
-                                            browser$1.runtime.onMessage.removeListener(handler);
-                                            sendResponse({
+                        return [4 /*yield*/, new Promise(function (resolve) {
+                                browser$1.runtime.onConnect.addListener(function (port) {
+                                    port.onMessage.addListener(function (message, port) {
+                                        // TODO: Verify sender
+                                        if (message === "auth_params") {
+                                            port.postMessage({
                                                 authorizeUrl: url,
                                                 domainUrl: _this.domainUrl,
                                             });
-                                            resolve();
                                         }
                                         else {
-                                            reject("Could not send response to script");
+                                            resolve(message);
+                                            port.disconnect();
                                         }
-                                    }
-                                };
-                                browser$1.runtime.onMessage.addListener(handler);
+                                    });
+                                });
                             })];
                     case 5:
-                        // TODO: Eventually do this with a longer lived connction
-                        // TODO: Package this into helper function
-                        _a.sent();
-                        return [4 /*yield*/, new Promise(function (resolve) {
-                                var handler = function (message) {
-                                    // @ts-ignore
-                                    browser$1.runtime.onMessage.removeListener(handler);
-                                    resolve(message);
-                                };
-                                browser$1.runtime.onMessage.addListener(handler);
-                            })];
-                    case 6:
                         codeResult = _a.sent();
                         if (stateIn !== codeResult.state) {
                             throw new Error("Invalid state");
                         }
                         scope = options.scope, audience = options.audience, customOptions = __rest(options, ["scope", "audience", "redirect_uri", "ignoreCache", "timeoutInSeconds", "detailedResponse"]);
                         return [4 /*yield*/, oauthToken(__assign(__assign(__assign({}, this.customOptions), customOptions), { scope: scope, audience: audience, baseUrl: this.domainUrl, client_id: this.options.client_id, code_verifier: code_verifier, code: codeResult.code, grant_type: "authorization_code", redirect_uri: params.redirect_uri, useFormData: this.options.useFormData, auth0Client: {} }))];
-                    case 7:
+                    case 6:
                         tokenResult = _a.sent();
                         return [4 /*yield*/, this._verifyIdToken(tokenResult.id_token, nonceIn)];
-                    case 8:
+                    case 7:
                         decodedToken = _a.sent();
                         return [2 /*return*/, __assign(__assign({}, tokenResult), { decodedToken: decodedToken, scope: params.scope, oauthTokenScope: tokenResult.scope, audience: params.audience || "default" })];
-                    case 9:
+                    case 8:
                         e_1 = _a.sent();
                         if (e_1.error === "login_required") ;
                         throw e_1;
-                    case 10: return [2 /*return*/];
+                    case 9: return [2 /*return*/];
                 }
             });
         });
@@ -1996,20 +1976,31 @@ var getCustomInitialOptions = function (options) {
 
 function handleTokenRequest() {
     return __awaiter(this, void 0, void 0, function () {
-        var response, codeResult;
+        var _this = this;
         return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0: return [4 /*yield*/, browser$1.runtime.sendMessage(undefined, "auth_params")];
-                case 1:
-                    response = _a.sent();
-                    return [4 /*yield*/, runIFrame(response.authorizeUrl, response.domainUrl, 60)];
-                case 2:
-                    codeResult = _a.sent();
-                    return [4 /*yield*/, browser$1.runtime.sendMessage(undefined, codeResult)];
-                case 3:
-                    _a.sent();
-                    return [2 /*return*/];
-            }
+            return [2 /*return*/, new Promise(function (resolve) {
+                    var conn = browser$1.runtime.connect(undefined, {
+                        name: "handleTokenRequest",
+                    });
+                    var handler = function (message) { return __awaiter(_this, void 0, void 0, function () {
+                        var codeResult;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    if (!("authorizeUrl" in message && "domainUrl" in message)) return [3 /*break*/, 2];
+                                    return [4 /*yield*/, runIFrame(message.authorizeUrl, message.domainUrl, 60)];
+                                case 1:
+                                    codeResult = _a.sent();
+                                    conn.postMessage(codeResult);
+                                    resolve();
+                                    _a.label = 2;
+                                case 2: return [2 /*return*/];
+                            }
+                        });
+                    }); };
+                    conn.onMessage.addListener(handler);
+                    conn.postMessage("auth_params");
+                })];
         });
     });
 }

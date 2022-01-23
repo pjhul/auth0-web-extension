@@ -215,47 +215,23 @@ export default class Auth0Client {
           iframe.setAttribute("src", url)
         },
         args: [params.redirect_uri],
-      })
+      });
 
-      // TODO: Eventually do this with a longer lived connction
-
-      // TODO: Package this into helper function
-      await new Promise<void>((resolve, reject) => {
-        const handler = (
-          message: any,
-          sender: browser.Runtime.MessageSender,
-          sendResponse?: (resonse?: any) => void,
-        ) => {
-          // TODO: Verify sender
-          if(message === "auth_params") {
-            if(sendResponse) {
-              // @ts-ignore
-              browser.runtime.onMessage.removeListener(handler);
-
-              sendResponse({
+      const codeResult: AuthenticationResult = await new Promise((resolve) => {
+        browser.runtime.onConnect.addListener((port) => {
+          port.onMessage.addListener((message, port) => {
+            // TODO: Verify sender
+            if(message === "auth_params") {
+              port.postMessage({
                 authorizeUrl: url,
                 domainUrl: this.domainUrl,
               });
-
-              resolve();
             } else {
-              reject("Could not send response to script");
+              resolve(message);
+              port.disconnect();
             }
-          }
-        }
-
-        browser.runtime.onMessage.addListener(handler)
-      })
-
-      const codeResult: AuthenticationResult = await new Promise(resolve => {
-        const handler = (message: any) => {
-          // @ts-ignore
-          browser.runtime.onMessage.removeListener(handler);
-
-          resolve(message)
-        }
-
-        browser.runtime.onMessage.addListener(handler)
+          })
+        })
       });
 
       if(stateIn !== codeResult.state) {
@@ -298,7 +274,7 @@ export default class Auth0Client {
         scope: params.scope,
         oauthTokenScope: tokenResult.scope as string,
         audience: params.audience || "default",
-      }
+      };
     } catch(e) {
       if((e as any).error === "login_required") {
         // TODO: Log user out
@@ -324,7 +300,7 @@ export default class Auth0Client {
       leeway: this.options.leeway,
       max_age: parseNumber(this.options.max_age),
       now,
-    })
+    });
   }
 }
 
