@@ -347,44 +347,11 @@ export default class Auth0Client {
       response_mode: "web_message",
     });
 
-    const timeout =
-      options.timeoutInSeconds || this.options.authorizeTimeoutInSeconds;
-
     try {
-      const queryOptions = { active: true, currentWindow: true };
-      let [currentTab] = await browser.tabs.query(queryOptions);
-
-      const codeResult: AuthenticationResult = await new Promise((resolve, reject) => {
-        if(!currentTab?.id) {
-          throw "Could not access current tab. Do you have the 'activeTab' permission in your manifest?";
-        }
-
-        const parentPort = browser.tabs.connect(currentTab.id, { name: PARENT_PORT_NAME });
-
-        const handler = (childPort: browser.Runtime.Port) => {
-          if(childPort.name === CHILD_PORT_NAME) {
-            childPort.onMessage.addListener(message => {
-              resolve(message);
-
-              childPort.disconnect();
-              parentPort.disconnect();
-
-              browser.runtime.onConnect.removeListener(handler);
-            });
-
-            childPort.postMessage({
-              authorizeUrl: url,
-              domainUrl: this.domainUrl,
-            });
-          }
-        }
-
-        browser.runtime.onConnect.addListener(handler)
-
-        parentPort.postMessage({
-          redirectUri: params.redirect_uri,
-        });
-      });
+      const codeResult = await this._performContentScriptHandshake(
+        url,
+        options.timeoutInSeconds || this.options.authorizeTimeoutInSeconds,
+      );
 
       if(stateIn !== codeResult.state) {
         throw new Error("Invalid state");
@@ -434,6 +401,56 @@ export default class Auth0Client {
 
       throw e;
     }
+  }
+
+  private async _performContentScriptHandshake(
+    authorizeUrl: string,
+    timeoutInSeconds?: number,
+  ): Promise<AuthenticationResult> {
+
+    const queryOptions = { currentWindow: true };
+    let tabs = await browser.tabs.query(queryOptions);
+
+    for(let tab of tabs) {
+      if(tab.id) {
+        const parentPort = browser.tabs.connect(tab.id, { name: PARENT_PORT_NAME });
+
+        // Should be careful here that we don't accidentally connect to a different content script with an onConnect
+        // handler. Maybe wait for a specific acknowledge message?
+        if(browser.runtime.lastError) {
+          continue;
+        } else {
+          return new Promise((resolve, reject) => {
+            const handler = (childPort: browser.Runtime.Port) => {
+              if(childPort.name === CHILD_PORT_NAME) {
+                childPort.onMessage.addListener(message => {
+                  resolve(message);
+
+                  childPort.disconnect();
+                  parentPort.disconnect();
+
+                  browser.runtime.onConnect.removeListener(handler);
+                });
+
+                childPort.postMessage({
+                  authorizeUrl,
+                  domainUrl: this.domainUrl,
+                });
+              }
+            }
+
+            browser.runtime.onConnect.addListener(handler)
+            parentPort.postMessage({});
+
+            if(browser.runtime.lastError) {
+              reject(browser.runtime.lastError);
+            }
+          });
+        }
+      }
+    }
+
+    throw "There are no tabs with content scripts running to connect to.";
   }
 
   private async _verifyIdToken(

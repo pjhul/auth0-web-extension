@@ -62,6 +62,7 @@ export default class Auth0Client {
     private _getTokenSilently;
     private _getTokenUsingRefreshToken;
     private _getTokenFromIfFrame;
+    private _performContentScriptHandshake;
     private _verifyIdToken;
     private _getEntryFromCache;
 }

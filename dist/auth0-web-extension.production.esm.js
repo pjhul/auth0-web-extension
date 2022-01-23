@@ -2309,8 +2309,7 @@ var Auth0Client = /** @class */ (function () {
     };
     Auth0Client.prototype._getTokenFromIfFrame = function (options) {
         return __awaiter(this, void 0, void 0, function () {
-            var stateIn, nonceIn, code_verifier, code_challengeBuffer, code_challenge, params, url, queryOptions, currentTab_1, codeResult, scope, audience, customOptions, tokenResult, decodedToken, e_1;
-            var _this = this;
+            var stateIn, nonceIn, code_verifier, code_challengeBuffer, code_challenge, params, url, codeResult, scope, audience, customOptions, tokenResult, decodedToken, e_1;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -2323,56 +2322,83 @@ var Auth0Client = /** @class */ (function () {
                         code_challenge = bufferToBase64UrlEncoded(code_challengeBuffer);
                         params = this._getParams(options, stateIn, nonceIn, code_challenge, options.redirect_uri || this.options.redirect_uri);
                         url = this._authorizeUrl(__assign(__assign({}, params), { prompt: "none", response_mode: "web_message" }));
-                        options.timeoutInSeconds || this.options.authorizeTimeoutInSeconds;
                         _a.label = 2;
                     case 2:
-                        _a.trys.push([2, 7, , 8]);
-                        queryOptions = { active: true, currentWindow: true };
-                        return [4 /*yield*/, browser$1.tabs.query(queryOptions)];
+                        _a.trys.push([2, 6, , 7]);
+                        return [4 /*yield*/, this._performContentScriptHandshake(url, options.timeoutInSeconds || this.options.authorizeTimeoutInSeconds)];
                     case 3:
-                        currentTab_1 = (_a.sent())[0];
-                        return [4 /*yield*/, new Promise(function (resolve, reject) {
-                                if (!(currentTab_1 === null || currentTab_1 === void 0 ? void 0 : currentTab_1.id)) {
-                                    throw "Could not access current tab. Do you have the 'activeTab' permission in your manifest?";
-                                }
-                                var parentPort = browser$1.tabs.connect(currentTab_1.id, { name: PARENT_PORT_NAME });
-                                var handler = function (childPort) {
-                                    if (childPort.name === CHILD_PORT_NAME) {
-                                        childPort.onMessage.addListener(function (message) {
-                                            resolve(message);
-                                            childPort.disconnect();
-                                            parentPort.disconnect();
-                                            browser$1.runtime.onConnect.removeListener(handler);
-                                        });
-                                        childPort.postMessage({
-                                            authorizeUrl: url,
-                                            domainUrl: _this.domainUrl,
-                                        });
-                                    }
-                                };
-                                browser$1.runtime.onConnect.addListener(handler);
-                                parentPort.postMessage({
-                                    redirectUri: params.redirect_uri,
-                                });
-                            })];
-                    case 4:
                         codeResult = _a.sent();
                         if (stateIn !== codeResult.state) {
                             throw new Error("Invalid state");
                         }
                         scope = options.scope, audience = options.audience, customOptions = __rest(options, ["scope", "redirect_uri", "audience", "ignoreCache", "timeoutInSeconds", "detailedResponse"]);
                         return [4 /*yield*/, oauthToken(__assign(__assign(__assign({}, this.customOptions), customOptions), { scope: scope, audience: audience, baseUrl: this.domainUrl, client_id: this.options.client_id, code_verifier: code_verifier, code: codeResult.code, grant_type: "authorization_code", redirect_uri: params.redirect_uri, useFormData: this.options.useFormData, auth0Client: {} }))];
-                    case 5:
+                    case 4:
                         tokenResult = _a.sent();
                         return [4 /*yield*/, this._verifyIdToken(tokenResult.id_token, nonceIn)];
-                    case 6:
+                    case 5:
                         decodedToken = _a.sent();
                         return [2 /*return*/, __assign(__assign({}, tokenResult), { decodedToken: decodedToken, scope: params.scope, oauthTokenScope: tokenResult.scope, audience: params.audience || "default" })];
-                    case 7:
+                    case 6:
                         e_1 = _a.sent();
                         if (e_1.error === "login_required") ;
                         throw e_1;
-                    case 8: return [2 /*return*/];
+                    case 7: return [2 /*return*/];
+                }
+            });
+        });
+    };
+    Auth0Client.prototype._performContentScriptHandshake = function (authorizeUrl, timeoutInSeconds) {
+        return __awaiter(this, void 0, void 0, function () {
+            var queryOptions, tabs, _loop_1, _i, tabs_1, tab, state_1;
+            var _this = this;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        queryOptions = { currentWindow: true };
+                        return [4 /*yield*/, browser$1.tabs.query(queryOptions)];
+                    case 1:
+                        tabs = _a.sent();
+                        _loop_1 = function (tab) {
+                            if (tab.id) {
+                                var parentPort_1 = browser$1.tabs.connect(tab.id, { name: PARENT_PORT_NAME });
+                                // Should be careful here that we don't accidentally connect to a different content script with an onConnect
+                                // handler. Maybe wait for a specific acknowledge message?
+                                if (browser$1.runtime.lastError) {
+                                    return "continue";
+                                }
+                                else {
+                                    return { value: new Promise(function (resolve, reject) {
+                                            var handler = function (childPort) {
+                                                if (childPort.name === CHILD_PORT_NAME) {
+                                                    childPort.onMessage.addListener(function (message) {
+                                                        resolve(message);
+                                                        childPort.disconnect();
+                                                        parentPort_1.disconnect();
+                                                        browser$1.runtime.onConnect.removeListener(handler);
+                                                    });
+                                                    childPort.postMessage({
+                                                        authorizeUrl: authorizeUrl,
+                                                        domainUrl: _this.domainUrl,
+                                                    });
+                                                }
+                                            };
+                                            browser$1.runtime.onConnect.addListener(handler);
+                                            parentPort_1.postMessage({});
+                                            if (browser$1.runtime.lastError) {
+                                                reject(browser$1.runtime.lastError);
+                                            }
+                                        }) };
+                                }
+                            }
+                        };
+                        for (_i = 0, tabs_1 = tabs; _i < tabs_1.length; _i++) {
+                            tab = tabs_1[_i];
+                            state_1 = _loop_1(tab);
+                            if (typeof state_1 === "object")
+                                return [2 /*return*/, state_1.value];
+                        }
+                        throw "There are no tabs with content scripts running to connect to.";
                 }
             });
         });
