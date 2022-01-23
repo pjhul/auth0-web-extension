@@ -1,4 +1,4 @@
-import { Auth0ClientOptions, CacheLocation, GetTokenSilentlyOptions, GetTokenSilentlyVerboseResult, User, GetUserOptions } from "./global";
+import { Auth0ClientOptions, CacheLocation, GetTokenSilentlyOptions, GetTokenSilentlyVerboseResult, User, GetUserOptions, IdToken, GetIdTokenClaimsOptions } from "./global";
 /**
  * Auth0 SDK for Background Scripts in a Web Extension
  */
@@ -31,6 +31,20 @@ export default class Auth0Client {
      * @param options
      */
     getUser<TUser extends User>(options?: GetUserOptions): Promise<TUser | undefined>;
+    /**
+     * ```js
+     * const claims = await auth0.getIdTokenClaims();
+     * ```
+     *
+      Returns all claims from the id_token if available.
+     *
+     * If you provide an audience or scope, they should match an existin
+     * (the SDK stores a corresponding ID Token with every Access Token,
+     * scope and audience to look up the ID Token)
+     *
+     * @param options
+     */
+    getIdTokenClaims(options?: GetIdTokenClaimsOptions): Promise<IdToken | undefined>;
     /**
      * ```js
      * const isAuthenticated = await auth0.isAuthenticated();

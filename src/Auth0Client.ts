@@ -38,6 +38,8 @@ import {
   GetTokenSilentlyVerboseResult,
   User,
   GetUserOptions,
+  IdToken,
+  GetIdTokenClaimsOptions,
 } from "./global"
 
 /**
@@ -190,6 +192,36 @@ export default class Auth0Client {
     );
 
     return cache?.decodedToken?.user as TUser | undefined;
+  }
+
+  /**
+   * ```js
+   * const claims = await auth0.getIdTokenClaims();
+   * ```
+   *
+    Returns all claims from the id_token if available.
+   *
+   * If you provide an audience or scope, they should match an existin
+   * (the SDK stores a corresponding ID Token with every Access Token,
+   * scope and audience to look up the ID Token)
+   *
+   * @param options
+   */
+  public async getIdTokenClaims(
+    options: GetIdTokenClaimsOptions = {}
+  ): Promise<IdToken | undefined> {
+    const audience = options.audience || this.options.audience || "default";
+    const scope = getUniqueScopes(this.defaultScope, this.scope, options.scope);
+
+    const cache = await this.cacheManager.get(
+      new CacheKey({
+        client_id: this.options.client_id,
+        audience,
+        scope,
+      })
+    );
+
+    return cache?.decodedToken?.claims;
   }
 
   /**

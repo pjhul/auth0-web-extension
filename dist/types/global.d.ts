@@ -223,6 +223,16 @@ export interface GetUserOptions {
      */
     audience?: string;
 }
+export interface GetIdTokenClaimsOptions {
+    /**
+     * The scope that was used in the authentication request
+     */
+    scope?: string;
+    /**
+     * The audience that was used in the authentication request
+     */
+    audience?: string;
+}
 export interface GetTokenSilentlyOptions {
     /**
      * When `true`, ignores the cache and always sends a
