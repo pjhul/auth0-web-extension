@@ -1,1 +1,1 @@
-export declare function handleTokenRequest(): Promise<void>;
+export declare function handleTokenRequest(redirectUri: string): void;

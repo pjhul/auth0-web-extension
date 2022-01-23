@@ -14,56 +14,31 @@ Using [yarn](https://yarnpkg.com)
 yarn add auth0-web-extension@https://github.com/pjhul/auth0-web-extension
 ```
 
-## Getting Started
+## Create the token handler
 
-To start, go to Auth0 and add the following URLs under these settings in your application:
-
-- **Allowed Callback URLs**: `chrome-extension://<YOUR_EXTENSION_ID>/callback.html`
-- **Allowed Web Origins**: `chrome-extension://<YOUR_EXTENSION_ID>/callback.html`
-
-## Create the callback page
-
-Create a new js file in your project called callback.js with the following contents:
+Create a new js file in your project called handler.js with the following contents:
 
 ```js
 import { handleTokenRequest } from "auth0-web-extension"
-handleTokenRequest();
+handleTokenRequest(<YOUR_REDIRECT_URI>);
 ```
 
 **Make sure this file is built and output into its own separate chunk, e.g. build/js/callback.js**
 
-In your build/output folder for your extension (wherever your index.html is located) create a new file called callback.html with the following contents
-
-```html
-<html>
-  <head>
-    <script src="<PATH_TO_CALLBACK_JS>"></script>
-  </head>
-
-  <body></body>
-</html>
-```
-
-Here, replace `PATH_TO_CALLBACK_JS` with wherever your callback.js file is output to in your build folder.
-
 ## Permissions
 
-In your manifest, you will need to change a couple items:
+In your manifest, you will need to add a couple items. It is important to make sure that this new content script gets injected on all the same pages your current content scripts do.
 
 ```jsonc
 {
   /* ... */
-  "permissions": [
-   "scripting" // Add the following permission
-  ],
-  "host_permissions": [
-    "https://*/*" // Add the following host permissions
-  ],
-  "web_accessible_resources": [
-    /* Add the following web accessible resource */
+  "content_scripts": [
     {
-      "resources": ["callback.html"],
-      "matches": ["https://*/*"]
+      "matches": [
+        "<YOUR_REDIRECT_URI>" // Make sure your redirect url is included
+      ],
+      "all_frames": true, // All frames must be set to true
+      "js": ["...", "<PATH_TO_HANDLER_JS>"] // This should be the path to the build output of the file (handler.js) we created in the last step
     }
   ]
 }
@@ -79,7 +54,7 @@ import createAuth0Client from "auth0-web-extension"
 const auth0 = createAuth0Client({
   domain: '<AUTH0_DOMAIN>',
   client_id: '<AUTH0_CLIENT_ID>',
-  redirect_uri: 'chrome-extension://<YOUR_EXTENSION_ID>/callback.html',
+  redirect_uri: '<YOUR_REDIRECT_URI>',
 });
 ```
 
@@ -93,9 +68,8 @@ const token = await auth0.getTokenSilently(options);
 
 ## Caveats
 
-1. This currently only works with callback URLs of the form `chrome-extension://...`, but this limitation will be removed within the next couple days
-2. We don't yet support refresh tokens, but again this should be coming soon.
-3. This package is not on npm yet, but after some of these other caveats are fixed I'll make it available.
+1. We don't yet support refresh tokens, but again this should be coming soon.
+2. This package is not on npm yet, but after some of these other caveats are fixed I'll make it available.
 
 ## Support + Feedback
 

@@ -1834,7 +1834,7 @@ var Auth0Client = /** @class */ (function () {
     };
     Auth0Client.prototype._getTokenFromIfFrame = function (options) {
         return __awaiter(this, void 0, void 0, function () {
-            var stateIn, nonceIn, code_verifier, code_challengeBuffer, code_challenge, params, url, queryOptions, currentTab, codeResult, scope, audience, customOptions, tokenResult, decodedToken, e_1;
+            var stateIn, nonceIn, code_verifier, code_challengeBuffer, code_challenge, params, url, queryOptions, currentTab_1, codeResult, scope, audience, customOptions, tokenResult, decodedToken, e_1;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -1846,69 +1846,56 @@ var Auth0Client = /** @class */ (function () {
                     case 1:
                         code_challengeBuffer = _a.sent();
                         code_challenge = bufferToBase64UrlEncoded(code_challengeBuffer);
-                        params = this._getParams(options, stateIn, nonceIn, code_challenge, options.redirect_uri ||
-                            this.options.redirect_uri);
+                        params = this._getParams(options, stateIn, nonceIn, code_challenge, options.redirect_uri || this.options.redirect_uri);
                         url = this._authorizeUrl(__assign(__assign({}, params), { prompt: "none", response_mode: "web_message" }));
                         options.timeoutInSeconds || this.options.authorizeTimeoutInSeconds;
                         _a.label = 2;
                     case 2:
-                        _a.trys.push([2, 8, , 9]);
+                        _a.trys.push([2, 7, , 8]);
                         queryOptions = { active: true, currentWindow: true };
                         return [4 /*yield*/, browser$1.tabs.query(queryOptions)];
                     case 3:
-                        currentTab = (_a.sent())[0];
-                        if (!(currentTab === null || currentTab === void 0 ? void 0 : currentTab.id)) {
-                            throw "Could not access current tab. Do you have the 'activeTab' permission in your manifest?";
-                        }
-                        return [4 /*yield*/, browser$1.scripting.executeScript({
-                                target: { tabId: currentTab.id, },
-                                func: function (url) {
-                                    var iframe = document.createElement("iframe");
-                                    iframe.setAttribute("width", "0");
-                                    iframe.setAttribute("height", "0");
-                                    iframe.style.display = "none";
-                                    document.body.appendChild(iframe);
-                                    iframe.setAttribute("src", url);
-                                },
-                                args: [params.redirect_uri],
-                            })];
-                    case 4:
-                        _a.sent();
-                        return [4 /*yield*/, new Promise(function (resolve) {
-                                browser$1.runtime.onConnect.addListener(function (port) {
-                                    port.onMessage.addListener(function (message, port) {
-                                        // TODO: Verify sender
-                                        if (message === "auth_params") {
-                                            port.postMessage({
-                                                authorizeUrl: url,
-                                                domainUrl: _this.domainUrl,
-                                            });
-                                        }
-                                        else {
-                                            resolve(message);
-                                            port.disconnect();
-                                        }
+                        currentTab_1 = (_a.sent())[0];
+                        return [4 /*yield*/, new Promise(function (resolve, reject) {
+                                if (!(currentTab_1 === null || currentTab_1 === void 0 ? void 0 : currentTab_1.id)) {
+                                    throw "Could not access current tab. Do you have the 'activeTab' permission in your manifest?";
+                                }
+                                var parentPort = browser$1.tabs.connect(currentTab_1.id, { name: "parent" });
+                                var handler = function (childPort) {
+                                    childPort.onMessage.addListener(function (message) {
+                                        resolve(message);
+                                        childPort.disconnect();
+                                        parentPort.disconnect();
+                                        browser$1.runtime.onConnect.removeListener(handler);
                                     });
+                                    childPort.postMessage({
+                                        authorizeUrl: url,
+                                        domainUrl: _this.domainUrl,
+                                    });
+                                };
+                                browser$1.runtime.onConnect.addListener(handler);
+                                parentPort.postMessage({
+                                    redirectUri: params.redirect_uri,
                                 });
                             })];
-                    case 5:
+                    case 4:
                         codeResult = _a.sent();
                         if (stateIn !== codeResult.state) {
                             throw new Error("Invalid state");
                         }
-                        scope = options.scope, audience = options.audience, customOptions = __rest(options, ["scope", "audience", "redirect_uri", "ignoreCache", "timeoutInSeconds", "detailedResponse"]);
+                        scope = options.scope, audience = options.audience, customOptions = __rest(options, ["scope", "redirect_uri", "audience", "ignoreCache", "timeoutInSeconds", "detailedResponse"]);
                         return [4 /*yield*/, oauthToken(__assign(__assign(__assign({}, this.customOptions), customOptions), { scope: scope, audience: audience, baseUrl: this.domainUrl, client_id: this.options.client_id, code_verifier: code_verifier, code: codeResult.code, grant_type: "authorization_code", redirect_uri: params.redirect_uri, useFormData: this.options.useFormData, auth0Client: {} }))];
-                    case 6:
+                    case 5:
                         tokenResult = _a.sent();
                         return [4 /*yield*/, this._verifyIdToken(tokenResult.id_token, nonceIn)];
-                    case 7:
+                    case 6:
                         decodedToken = _a.sent();
                         return [2 /*return*/, __assign(__assign({}, tokenResult), { decodedToken: decodedToken, scope: params.scope, oauthTokenScope: tokenResult.scope, audience: params.audience || "default" })];
-                    case 8:
+                    case 7:
                         e_1 = _a.sent();
                         if (e_1.error === "login_required") ;
                         throw e_1;
-                    case 9: return [2 /*return*/];
+                    case 8: return [2 /*return*/];
                 }
             });
         });
@@ -1974,35 +1961,44 @@ var getCustomInitialOptions = function (options) {
     return customParams;
 };
 
-function handleTokenRequest() {
-    return __awaiter(this, void 0, void 0, function () {
-        var _this = this;
-        return __generator(this, function (_a) {
-            return [2 /*return*/, new Promise(function (resolve) {
-                    var conn = browser$1.runtime.connect(undefined, {
-                        name: "handleTokenRequest",
-                    });
-                    var handler = function (message) { return __awaiter(_this, void 0, void 0, function () {
-                        var codeResult;
-                        return __generator(this, function (_a) {
-                            switch (_a.label) {
-                                case 0:
-                                    if (!("authorizeUrl" in message && "domainUrl" in message)) return [3 /*break*/, 2];
-                                    return [4 /*yield*/, runIFrame(message.authorizeUrl, message.domainUrl, 60)];
-                                case 1:
-                                    codeResult = _a.sent();
-                                    conn.postMessage(codeResult);
-                                    resolve();
-                                    _a.label = 2;
-                                case 2: return [2 /*return*/];
-                            }
-                        });
-                    }); };
-                    conn.onMessage.addListener(handler);
-                    conn.postMessage("auth_params");
-                })];
+// We can probably pull redirectUri from background script at some point
+function handleTokenRequest(redirectUri) {
+    var _this = this;
+    if (window.location.origin === redirectUri) {
+        var port_1 = browser$1.runtime.connect();
+        var handler = function (message) { return __awaiter(_this, void 0, void 0, function () {
+            var authorizeUrl, domainUrl, codeResult;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        authorizeUrl = message.authorizeUrl, domainUrl = message.domainUrl;
+                        return [4 /*yield*/, runIFrame(authorizeUrl, domainUrl, 60)];
+                    case 1:
+                        codeResult = _a.sent();
+                        port_1.postMessage(codeResult);
+                        return [2 /*return*/];
+                }
+            });
+        }); };
+        port_1.onMessage.addListener(handler);
+    }
+    else {
+        browser$1.runtime.onConnect.addListener(function (port) {
+            var handler = function () {
+                var iframe = document.createElement("iframe");
+                iframe.setAttribute("width", "0");
+                iframe.setAttribute("height", "0");
+                iframe.style.display = "none";
+                document.body.appendChild(iframe);
+                iframe.setAttribute("src", redirectUri);
+                port.onMessage.removeListener(handler);
+                port.onDisconnect.addListener(function () {
+                    window.document.body.removeChild(iframe);
+                });
+            };
+            port.onMessage.addListener(handler);
         });
-    });
+    }
 }
 var runIFrame = function (authorizeUrl, eventOrigin, timeoutInSeconds) {
     if (timeoutInSeconds === void 0) { timeoutInSeconds = 60; }

@@ -9,28 +9,45 @@ import {
   GenericError,
 } from "./errors"
 
-export async function handleTokenRequest(): Promise<void> {
-  return new Promise<void>((resolve) => {
-    const conn = browser.runtime.connect(undefined, {
-      name: "handleTokenRequest",
-    });
+// We can probably pull redirectUri from background script at some point
+export function handleTokenRequest(redirectUri: string) {
+  if(window.location.origin === redirectUri) {
+    const port = browser.runtime.connect()
 
     const handler = async (message: any) => {
-      if("authorizeUrl" in message && "domainUrl" in message) {
-        const codeResult = await runIFrame(
-          message.authorizeUrl,
-          message.domainUrl,
-          60
-        );
+      const { authorizeUrl, domainUrl } = message
 
-        conn.postMessage(codeResult);
-        resolve();
-      }
-    };
+      const codeResult = await runIFrame(
+        authorizeUrl,
+        domainUrl,
+        60
+      );
 
-    conn.onMessage.addListener(handler);
-    conn.postMessage("auth_params");
-  })
+      port.postMessage(codeResult);
+    }
+
+    port.onMessage.addListener(handler);
+  } else {
+    browser.runtime.onConnect.addListener(port => {
+      const handler = () => {
+        const iframe = document.createElement("iframe");
+
+        iframe.setAttribute("width", "0");
+        iframe.setAttribute("height", "0");
+        iframe.style.display = "none";
+
+        document.body.appendChild(iframe);
+        iframe.setAttribute("src", redirectUri);
+
+        port.onMessage.removeListener(handler);
+        port.onDisconnect.addListener(() => {
+          window.document.body.removeChild(iframe);
+        });
+      };
+
+      port.onMessage.addListener(handler);
+    });
+  }
 }
 
 const runIFrame = async (

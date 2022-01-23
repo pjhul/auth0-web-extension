@@ -23,7 +23,6 @@ import {
   AuthorizeOptions,
   GetTokenSilentlyOptions,
   GetTokenSilentlyResult,
-  OAuthTokenOptions,
   AuthenticationResult,
 } from "./global"
 
@@ -179,8 +178,7 @@ export default class Auth0Client {
       stateIn,
       nonceIn,
       code_challenge,
-      options.redirect_uri ||
-        this.options.redirect_uri,
+      options.redirect_uri || this.options.redirect_uri,
     );
 
     // TODO: Add support for organizations
@@ -189,7 +187,7 @@ export default class Auth0Client {
       ...params,
       prompt: "none",
       response_mode: "web_message",
-    })
+    });
 
     const timeout =
       options.timeoutInSeconds || this.options.authorizeTimeoutInSeconds;
@@ -198,40 +196,33 @@ export default class Auth0Client {
       const queryOptions = { active: true, currentWindow: true };
       let [currentTab] = await browser.tabs.query(queryOptions);
 
-      if(!currentTab?.id) {
-        throw "Could not access current tab. Do you have the 'activeTab' permission in your manifest?";
-      }
+      const codeResult: AuthenticationResult = await new Promise((resolve, reject) => {
+        if(!currentTab?.id) {
+          throw "Could not access current tab. Do you have the 'activeTab' permission in your manifest?";
+        }
 
-      await browser.scripting.executeScript({
-        target: { tabId: currentTab.id, },
-        func: (url: string) => {
-          const iframe = document.createElement("iframe");
+        const parentPort = browser.tabs.connect(currentTab.id, { name: "parent" });
 
-          iframe.setAttribute("width", "0");
-          iframe.setAttribute("height", "0");
-          iframe.style.display = "none";
+        const handler = (childPort: browser.Runtime.Port) => {
+          childPort.onMessage.addListener(message => {
+            resolve(message);
+            childPort.disconnect();
+            parentPort.disconnect();
 
-          document.body.appendChild(iframe)
-          iframe.setAttribute("src", url)
-        },
-        args: [params.redirect_uri],
-      });
+            browser.runtime.onConnect.removeListener(handler);
+          });
 
-      const codeResult: AuthenticationResult = await new Promise((resolve) => {
-        browser.runtime.onConnect.addListener((port) => {
-          port.onMessage.addListener((message, port) => {
-            // TODO: Verify sender
-            if(message === "auth_params") {
-              port.postMessage({
-                authorizeUrl: url,
-                domainUrl: this.domainUrl,
-              });
-            } else {
-              resolve(message);
-              port.disconnect();
-            }
-          })
-        })
+          childPort.postMessage({
+            authorizeUrl: url,
+            domainUrl: this.domainUrl,
+          });
+        }
+
+        browser.runtime.onConnect.addListener(handler)
+
+        parentPort.postMessage({
+          redirectUri: params.redirect_uri,
+        });
       });
 
       if(stateIn !== codeResult.state) {
@@ -240,8 +231,8 @@ export default class Auth0Client {
 
       const {
         scope,
-        audience,
         redirect_uri,
+        audience,
         ignoreCache,
         timeoutInSeconds,
         detailedResponse,
@@ -356,4 +347,4 @@ const getCustomInitialOptions = (
     ...customParams
   } = options;
   return customParams;
-};
+}
