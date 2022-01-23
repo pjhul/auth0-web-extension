@@ -2165,7 +2165,9 @@ var Auth0Client = /** @class */ (function () {
                 switch (_b.label) {
                     case 0:
                         ignoreCache = options.ignoreCache, getTokenOptions = __rest(options, ["ignoreCache"]);
+                        console.log("getTokenSilently");
                         if (!(!ignoreCache && getTokenOptions.scope)) return [3 /*break*/, 2];
+                        console.log("pulling token from cache");
                         return [4 /*yield*/, this._getEntryFromCache({
                                 scope: getTokenOptions.scope,
                                 audience: getTokenOptions.audience || "default",
@@ -2190,6 +2192,7 @@ var Auth0Client = /** @class */ (function () {
                         _b.label = 6;
                     case 6:
                         authResult = _a;
+                        console.log("storing token in cache");
                         return [4 /*yield*/, this.cacheManager.set(__assign({ client_id: this.options.client_id }, authResult))
                             // TODO: Save to cookies
                         ];
@@ -2228,6 +2231,7 @@ var Auth0Client = /** @class */ (function () {
                         code_challenge = bufferToBase64UrlEncoded(code_challengeBuffer);
                         params = this._getParams(options, stateIn, nonceIn, code_challenge, options.redirect_uri || this.options.redirect_uri);
                         url = this._authorizeUrl(__assign(__assign({}, params), { prompt: "none", response_mode: "web_message" }));
+                        console.log("using authorize url: ".concat(url));
                         options.timeoutInSeconds || this.options.authorizeTimeoutInSeconds;
                         _a.label = 2;
                     case 2:
@@ -2236,24 +2240,31 @@ var Auth0Client = /** @class */ (function () {
                         return [4 /*yield*/, browser$1.tabs.query(queryOptions)];
                     case 3:
                         currentTab_1 = (_a.sent())[0];
+                        console.log("current tab id: ".concat(currentTab_1 === null || currentTab_1 === void 0 ? void 0 : currentTab_1.id));
                         return [4 /*yield*/, new Promise(function (resolve, reject) {
                                 if (!(currentTab_1 === null || currentTab_1 === void 0 ? void 0 : currentTab_1.id)) {
                                     throw "Could not access current tab. Do you have the 'activeTab' permission in your manifest?";
                                 }
                                 var parentPort = browser$1.tabs.connect(currentTab_1.id, { name: "parent" });
+                                console.log("connecting to content script in tab ".concat(currentTab_1.id));
                                 var handler = function (childPort) {
+                                    console.log("child iframe connected from iframe");
                                     childPort.onMessage.addListener(function (message) {
+                                        console.log("received final message ".concat(JSON.stringify(message)));
                                         resolve(message);
                                         childPort.disconnect();
                                         parentPort.disconnect();
+                                        console.log("disconnecting and removing handlers");
                                         browser$1.runtime.onConnect.removeListener(handler);
                                     });
+                                    console.log("sending authorize url");
                                     childPort.postMessage({
                                         authorizeUrl: url,
                                         domainUrl: _this.domainUrl,
                                     });
                                 };
                                 browser$1.runtime.onConnect.addListener(handler);
+                                console.log("sending redirectUri to parent iframe");
                                 parentPort.postMessage({
                                     redirectUri: params.redirect_uri,
                                 });
@@ -2264,6 +2275,7 @@ var Auth0Client = /** @class */ (function () {
                             throw new Error("Invalid state");
                         }
                         scope = options.scope, audience = options.audience, customOptions = __rest(options, ["scope", "redirect_uri", "audience", "ignoreCache", "timeoutInSeconds", "detailedResponse"]);
+                        console.log("getting access_token with code");
                         return [4 /*yield*/, oauthToken(__assign(__assign(__assign({}, this.customOptions), customOptions), { scope: scope, audience: audience, baseUrl: this.domainUrl, client_id: this.options.client_id, code_verifier: code_verifier, code: codeResult.code, grant_type: "authorization_code", redirect_uri: params.redirect_uri, useFormData: this.options.useFormData, auth0Client: {} }))];
                     case 5:
                         tokenResult = _a.sent();
@@ -2381,6 +2393,7 @@ var getCustomInitialOptions = function (options) {
 function handleTokenRequest(redirectUri) {
     var _this = this;
     if (window.location.origin === redirectUri) {
+        console.log("content script running in child iframe, connecting to background");
         var port_1 = browser$1.runtime.connect();
         var handler = function (message) { return __awaiter(_this, void 0, void 0, function () {
             var authorizeUrl, domainUrl, codeResult;
@@ -2388,9 +2401,11 @@ function handleTokenRequest(redirectUri) {
                 switch (_a.label) {
                     case 0:
                         authorizeUrl = message.authorizeUrl, domainUrl = message.domainUrl;
+                        console.log("received message ".concat(JSON.stringify(message)));
                         return [4 /*yield*/, runIFrame(authorizeUrl, domainUrl, 60)];
                     case 1:
                         codeResult = _a.sent();
+                        console.log("returning code");
                         port_1.postMessage(codeResult);
                         return [2 /*return*/];
                 }
@@ -2401,6 +2416,7 @@ function handleTokenRequest(redirectUri) {
     else {
         browser$1.runtime.onConnect.addListener(function (port) {
             var handler = function () {
+                console.log("creating parent iframe");
                 var iframe = document.createElement("iframe");
                 iframe.setAttribute("width", "0");
                 iframe.setAttribute("height", "0");
@@ -2409,6 +2425,7 @@ function handleTokenRequest(redirectUri) {
                 iframe.setAttribute("src", redirectUri);
                 port.onMessage.removeListener(handler);
                 port.onDisconnect.addListener(function () {
+                    console.log("removing parent iframe");
                     window.document.body.removeChild(iframe);
                 });
             };

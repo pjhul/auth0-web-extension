@@ -195,7 +195,11 @@ export default class Auth0Client {
   ): Promise<string | GetTokenSilentlyVerboseResult> {
     const { ignoreCache, ...getTokenOptions } = options;
 
+    console.log("getTokenSilently")
+
     if(!ignoreCache && getTokenOptions.scope) {
+      console.log("pulling token from cache")
+
       const entry = await this._getEntryFromCache({
         scope: getTokenOptions.scope,
         audience: getTokenOptions.audience || "default",
@@ -213,6 +217,8 @@ export default class Auth0Client {
     const authResult = this.options.useRefreshTokens
       ? await this._getTokenUsingRefreshToken(getTokenOptions)
       : await this._getTokenFromIfFrame(getTokenOptions);
+
+    console.log("storing token in cache")
 
     await this.cacheManager.set({
       client_id: this.options.client_id,
@@ -266,12 +272,16 @@ export default class Auth0Client {
       response_mode: "web_message",
     });
 
+    console.log(`using authorize url: ${url}`)
+
     const timeout =
       options.timeoutInSeconds || this.options.authorizeTimeoutInSeconds;
 
     try {
       const queryOptions = { active: true, currentWindow: true };
       let [currentTab] = await browser.tabs.query(queryOptions);
+
+      console.log(`current tab id: ${currentTab?.id}`)
 
       const codeResult: AuthenticationResult = await new Promise((resolve, reject) => {
         if(!currentTab?.id) {
@@ -280,14 +290,24 @@ export default class Auth0Client {
 
         const parentPort = browser.tabs.connect(currentTab.id, { name: "parent" });
 
+        console.log(`connecting to content script in tab ${currentTab.id}`)
+
         const handler = (childPort: browser.Runtime.Port) => {
+          console.log(`child iframe connected from iframe`)
+
           childPort.onMessage.addListener(message => {
+            console.log(`received final message ${JSON.stringify(message)}`)
+
             resolve(message);
             childPort.disconnect();
             parentPort.disconnect();
 
+            console.log("disconnecting and removing handlers")
+
             browser.runtime.onConnect.removeListener(handler);
           });
+
+          console.log("sending authorize url")
 
           childPort.postMessage({
             authorizeUrl: url,
@@ -296,6 +316,8 @@ export default class Auth0Client {
         }
 
         browser.runtime.onConnect.addListener(handler)
+
+        console.log(`sending redirectUri to parent iframe`)
 
         parentPort.postMessage({
           redirectUri: params.redirect_uri,
@@ -315,6 +337,8 @@ export default class Auth0Client {
         detailedResponse,
         ...customOptions
       } = options;
+
+      console.log("getting access_token with code")
 
       const tokenResult = await oauthToken({
         ...this.customOptions,

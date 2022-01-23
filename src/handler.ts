@@ -12,16 +12,22 @@ import {
 // We can probably pull redirectUri from background script at some point
 export function handleTokenRequest(redirectUri: string) {
   if(window.location.origin === redirectUri) {
+    console.log("content script running in child iframe, connecting to background")
+
     const port = browser.runtime.connect()
 
     const handler = async (message: any) => {
       const { authorizeUrl, domainUrl } = message
+
+      console.log(`received message ${JSON.stringify(message)}`)
 
       const codeResult = await runIFrame(
         authorizeUrl,
         domainUrl,
         60
       );
+
+      console.log("returning code")
 
       port.postMessage(codeResult);
     }
@@ -30,6 +36,8 @@ export function handleTokenRequest(redirectUri: string) {
   } else {
     browser.runtime.onConnect.addListener(port => {
       const handler = () => {
+        console.log("creating parent iframe")
+
         const iframe = document.createElement("iframe");
 
         iframe.setAttribute("width", "0");
@@ -41,6 +49,7 @@ export function handleTokenRequest(redirectUri: string) {
 
         port.onMessage.removeListener(handler);
         port.onDisconnect.addListener(() => {
+          console.log("removing parent iframe")
           window.document.body.removeChild(iframe);
         });
       };
