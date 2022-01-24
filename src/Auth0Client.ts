@@ -409,12 +409,17 @@ export default class Auth0Client {
       const queryOptions = { active: true, currentWindow: true };
       let [currentTab] = await browser.tabs.query(queryOptions);
 
-      const codeResult: AuthenticationResult = await new Promise((resolve, reject) => {
-        if(!currentTab?.id) {
-          throw "Could not access current tab. Do you have the 'activeTab' permission in your manifest?";
-        }
+      const { id } = currentTab || {};
 
-        const parentPort = browser.tabs.connect(currentTab.id, { name: PARENT_PORT_NAME });
+      if(!id) {
+        throw "Could not access current tab.";
+      }
+
+      // This will throw if there is not a content script running
+      await browser.tabs.sendMessage(id, "");
+
+      const codeResult: AuthenticationResult = await new Promise((resolve) => {
+        const parentPort = browser.tabs.connect(id, { name: PARENT_PORT_NAME });
 
         const handler = (childPort: browser.Runtime.Port) => {
           if(childPort.name === CHILD_PORT_NAME) {
@@ -434,7 +439,7 @@ export default class Auth0Client {
           }
         }
 
-        browser.runtime.onConnect.addListener(handler)
+        browser.runtime.onConnect.addListener(handler);
 
         parentPort.postMessage({
           redirectUri: params.redirect_uri,

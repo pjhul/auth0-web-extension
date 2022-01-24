@@ -38,14 +38,10 @@ export default class Lock {
         await this.lockCorrector()
         await this.waitForSomethingToChange(maxTime)
       } else {
-        const timeoutKey = `${this.id}::${key}::${iat}`;
-
         await this.setItem(storageKey, JSON.stringify({
           id: this.id,
           iat,
-          timeoutKey,
-          timeAcquired: Date.now(),
-          timeRefreshed: Date.now(),
+          timeUpdated: Date.now(),
         }));
 
         await delay(30);
@@ -103,7 +99,7 @@ export default class Lock {
 
       if(item !== null) {
         const parsed = JSON.parse(item)
-        parsed.timeRefreshed = Date.now()
+        parsed.timeUpdated = Date.now()
         await this.setItem(key, JSON.stringify(parsed))
         getProcessLock().unlock(iat)
       } else {
@@ -124,8 +120,7 @@ export default class Lock {
         let lockObj = await this.getItem(key);
         if(lockObj !== null) {
           const parsed = JSON.parse(lockObj)
-          if((parsed.timeRefreshed === undefined && parsed.timeAcquired < minTime) ||
-            (parsed.timeRefreshed !== undefined && parsed.timeRefreshed < minTime)) {
+          if(parsed.timeUpdated < minTime) {
             this.removeItem(key)
             notifyWaiters = true
           }

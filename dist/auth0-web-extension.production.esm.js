@@ -1534,7 +1534,7 @@ var Lock = /** @class */ (function () {
     Lock.prototype.acquireLock = function (key, timeout) {
         if (timeout === void 0) { timeout = 5000; }
         return __awaiter(this, void 0, void 0, function () {
-            var iat, maxTime, storageKey, timeoutKey, itemPostDelay, item;
+            var iat, maxTime, storageKey, itemPostDelay, item;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -1557,15 +1557,11 @@ var Lock = /** @class */ (function () {
                     case 5:
                         _a.sent();
                         return [3 /*break*/, 10];
-                    case 6:
-                        timeoutKey = "".concat(this.id, "::").concat(key, "::").concat(iat);
-                        return [4 /*yield*/, this.setItem(storageKey, JSON.stringify({
-                                id: this.id,
-                                iat: iat,
-                                timeoutKey: timeoutKey,
-                                timeAcquired: Date.now(),
-                                timeRefreshed: Date.now(),
-                            }))];
+                    case 6: return [4 /*yield*/, this.setItem(storageKey, JSON.stringify({
+                            id: this.id,
+                            iat: iat,
+                            timeUpdated: Date.now(),
+                        }))];
                     case 7:
                         _a.sent();
                         return [4 /*yield*/, delay(30)];
@@ -1641,7 +1637,7 @@ var Lock = /** @class */ (function () {
                                 item = _a.sent();
                                 if (!(item !== null)) return [3 /*break*/, 4];
                                 parsed = JSON.parse(item);
-                                parsed.timeRefreshed = Date.now();
+                                parsed.timeUpdated = Date.now();
                                 return [4 /*yield*/, this.setItem(key, JSON.stringify(parsed))];
                             case 3:
                                 _a.sent();
@@ -1687,8 +1683,7 @@ var Lock = /** @class */ (function () {
                         lockObj = _b.sent();
                         if (lockObj !== null) {
                             parsed = JSON.parse(lockObj);
-                            if ((parsed.timeRefreshed === undefined && parsed.timeAcquired < minTime) ||
-                                (parsed.timeRefreshed !== undefined && parsed.timeRefreshed < minTime)) {
+                            if (parsed.timeUpdated < minTime) {
                                 this.removeItem(key);
                                 notifyWaiters = true;
                             }
@@ -2837,7 +2832,7 @@ var Auth0Client = /** @class */ (function () {
     };
     Auth0Client.prototype._getTokenFromIfFrame = function (options) {
         return __awaiter(this, void 0, void 0, function () {
-            var stateIn, nonceIn, code_verifier, code_challengeBuffer, code_challenge, params, url, queryOptions, currentTab_1, codeResult, scope, audience, customOptions, tokenResult, decodedToken, e_1;
+            var stateIn, nonceIn, code_verifier, code_challengeBuffer, code_challenge, params, url, queryOptions, currentTab, id_1, codeResult, scope, audience, customOptions, tokenResult, decodedToken, e_1;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -2854,16 +2849,22 @@ var Auth0Client = /** @class */ (function () {
                         options.timeoutInSeconds || this.options.authorizeTimeoutInSeconds;
                         _a.label = 2;
                     case 2:
-                        _a.trys.push([2, 7, , 8]);
+                        _a.trys.push([2, 8, , 9]);
                         queryOptions = { active: true, currentWindow: true };
                         return [4 /*yield*/, browser$1.tabs.query(queryOptions)];
                     case 3:
-                        currentTab_1 = (_a.sent())[0];
-                        return [4 /*yield*/, new Promise(function (resolve, reject) {
-                                if (!(currentTab_1 === null || currentTab_1 === void 0 ? void 0 : currentTab_1.id)) {
-                                    throw "Could not access current tab. Do you have the 'activeTab' permission in your manifest?";
-                                }
-                                var parentPort = browser$1.tabs.connect(currentTab_1.id, { name: PARENT_PORT_NAME });
+                        currentTab = (_a.sent())[0];
+                        id_1 = (currentTab || {}).id;
+                        if (!id_1) {
+                            throw "Could not access current tab.";
+                        }
+                        // This will throw if there is not a content script running
+                        return [4 /*yield*/, browser$1.tabs.sendMessage(id_1, "")];
+                    case 4:
+                        // This will throw if there is not a content script running
+                        _a.sent();
+                        return [4 /*yield*/, new Promise(function (resolve) {
+                                var parentPort = browser$1.tabs.connect(id_1, { name: PARENT_PORT_NAME });
                                 var handler = function (childPort) {
                                     if (childPort.name === CHILD_PORT_NAME) {
                                         childPort.onMessage.addListener(function (message) {
@@ -2883,24 +2884,24 @@ var Auth0Client = /** @class */ (function () {
                                     redirectUri: params.redirect_uri,
                                 });
                             })];
-                    case 4:
+                    case 5:
                         codeResult = _a.sent();
                         if (stateIn !== codeResult.state) {
                             throw new Error("Invalid state");
                         }
                         scope = options.scope, audience = options.audience, customOptions = __rest(options, ["scope", "redirect_uri", "audience", "ignoreCache", "timeoutInSeconds", "detailedResponse"]);
                         return [4 /*yield*/, oauthToken(__assign(__assign(__assign({}, this.customOptions), customOptions), { scope: scope, audience: audience, baseUrl: this.domainUrl, client_id: this.options.client_id, code_verifier: code_verifier, code: codeResult.code, grant_type: "authorization_code", redirect_uri: params.redirect_uri, useFormData: this.options.useFormData, auth0Client: {} }))];
-                    case 5:
+                    case 6:
                         tokenResult = _a.sent();
                         return [4 /*yield*/, this._verifyIdToken(tokenResult.id_token, nonceIn)];
-                    case 6:
+                    case 7:
                         decodedToken = _a.sent();
                         return [2 /*return*/, __assign(__assign({}, tokenResult), { decodedToken: decodedToken, scope: params.scope, oauthTokenScope: tokenResult.scope, audience: params.audience || "default" })];
-                    case 7:
+                    case 8:
                         e_1 = _a.sent();
                         if (e_1.error === "login_required") ;
                         throw e_1;
-                    case 8: return [2 /*return*/];
+                    case 9: return [2 /*return*/];
                 }
             });
         });
