@@ -9,14 +9,33 @@ export const getCryptoSubtle = () => {
   //safari 10.x uses webkitSubtle
   return crypto.subtle || (crypto as any).webkitSubtle;
 };
-export const createRandomString = () => {
+
+export const createRandomString = (length: number): string => {
   const charset =
     "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_~.";
+
   let random = "";
+
+  for(let i = 0; i < length; i++) {
+    const idx = Math.floor(Math.random() * charset.length);
+    random += charset[idx];
+  }
+
+  return random;
+}
+
+export const createSecureRandomString = () => {
+  const charset =
+    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_~.";
+
+  let random = "";
+
   const randomValues = Array.from(
     getCrypto().getRandomValues(new Uint8Array(43))
   );
+
   randomValues.forEach(v => (random += charset[v % charset.length]));
+
   return random;
 };
 

@@ -1,6 +1,7 @@
 export declare const getCrypto: () => Crypto;
 export declare const getCryptoSubtle: () => SubtleCrypto;
-export declare const createRandomString: () => string;
+export declare const createRandomString: (length: number) => string;
+export declare const createSecureRandomString: () => string;
 export declare const encode: (value: string) => string;
 export declare const decode: (value: string) => string;
 export declare const createQueryParams: (params: any) => string;

@@ -1,8 +1,10 @@
 import browser from "webextension-polyfill"
 
+import Lock from "./lock"
+
 import {
   bufferToBase64UrlEncoded,
-  createRandomString,
+  createSecureRandomString,
   createQueryParams,
   encode,
   sha256,
@@ -26,6 +28,7 @@ import {
   CACHE_LOCATION_MEMORY,
   CHILD_PORT_NAME,
   PARENT_PORT_NAME,
+  RECOVERABLE_ERRORS,
 } from "./constants"
 
 import {
@@ -43,6 +46,13 @@ import {
   IdToken,
   GetIdTokenClaimsOptions,
 } from "./global"
+
+import { singlePromise, retryPromise } from "./promise-utils"
+import {TimeoutError} from "./errors"
+
+const lock = new Lock();
+
+const GET_TOKEN_SILENTLY_LOCK_KEY = "auth0.lock.getTokenSilently";
 
 /**
  * Auth0 SDK for Background Scripts in a Web Extension
@@ -185,6 +195,11 @@ export default class Auth0Client {
     const audience = options.audience || this.options.audience || "default";
     const scope = getUniqueScopes(this.defaultScope, this.scope, options.scope);
 
+    await this.checkSession({
+      audience,
+      scope,
+    });
+
     const cache = await this.cacheManager.get(
       new CacheKey({
         client_id: this.options.client_id,
@@ -240,6 +255,18 @@ export default class Auth0Client {
     return Boolean(user);
   }
 
+  public async checkSession(options?: GetTokenSilentlyOptions) {
+    // TODO: Check for cookie
+
+    try {
+      await this.getTokenSilently(options);
+    } catch(error) {
+      if(!RECOVERABLE_ERRORS.includes((error as any).error)) {
+        throw error;
+      }
+    }
+  }
+
   public async getTokenSilently(
     options: GetTokenSilentlyOptions & { detailedResponse: true }
   ): Promise<GetTokenSilentlyVerboseResult>
@@ -262,13 +289,16 @@ export default class Auth0Client {
   public async getTokenSilently(
     options: GetTokenSilentlyOptions = {},
   ): Promise<string | GetTokenSilentlyVerboseResult> {
-    // FIXME: Should use keyed singlePromise like is auth0-spa-js
-    return await this._getTokenSilently({
-      audience: this.options.audience,
-      ignoreCache: false,
-      ...options,
-      scope: getUniqueScopes(this.defaultScope, this.scope, options.scope),
-    });
+    return singlePromise(
+      () =>
+        this._getTokenSilently({
+          audience: this.options.audience,
+          ignoreCache: false,
+          ...options,
+          scope: getUniqueScopes(this.defaultScope, this.scope, options.scope),
+        }),
+      `${this.options.client_id}::${this.options.audience}::${getUniqueScopes(this.defaultScope, this.scope, options.scope)}`
+    );
   }
 
   private async _getTokenSilently(
@@ -289,31 +319,56 @@ export default class Auth0Client {
       }
     }
 
-    // TODO: Acquire lock
+    if(
+      await retryPromise(
+        () => lock.acquireLock(GET_TOKEN_SILENTLY_LOCK_KEY, 5000),
+        10
+      )
+    ) {
+      try {
+        if(!ignoreCache && getTokenOptions.scope) {
+          const entry = await this._getEntryFromCache({
+            scope: getTokenOptions.scope,
+            audience: getTokenOptions.audience || "default",
+            client_id: this.options.client_id,
+            getDetailedEntry: options.detailedResponse,
+          });
 
-    const authResult = this.options.useRefreshTokens
-      ? await this._getTokenUsingRefreshToken(getTokenOptions)
-      : await this._getTokenFromIfFrame(getTokenOptions);
+          if(entry) {
+            return entry;
+          }
+        }
 
-    await this.cacheManager.set({
-      client_id: this.options.client_id,
-      ...authResult,
-    })
+        const authResult = this.options.useRefreshTokens
+          ? await this._getTokenUsingRefreshToken(getTokenOptions)
+          : await this._getTokenFromIfFrame(getTokenOptions);
 
-    // TODO: Save to cookies
+        await this.cacheManager.set({
+          client_id: this.options.client_id,
+          ...authResult,
+        })
 
-    if(options.detailedResponse) {
-      const { id_token, access_token, oauthTokenScope, expires_in } = authResult;
+        // TODO: Save to cookies
 
-      return {
-        id_token,
-        access_token,
-        ...(oauthTokenScope ? { scope: oauthTokenScope } : null),
-        expires_in,
-      };
+        if(options.detailedResponse) {
+          const { id_token, access_token, oauthTokenScope, expires_in } = authResult;
+
+          return {
+            id_token,
+            access_token,
+            ...(oauthTokenScope ? { scope: oauthTokenScope } : null),
+            expires_in,
+          };
+        }
+
+        return authResult.access_token;
+
+      } finally {
+        await lock.releaseLock(GET_TOKEN_SILENTLY_LOCK_KEY)
+      }
+    } else {
+      throw new TimeoutError();
     }
-
-    return authResult.access_token;
   }
 
   private async _getTokenUsingRefreshToken(
@@ -325,9 +380,9 @@ export default class Auth0Client {
   private async _getTokenFromIfFrame(
     options: GetTokenSilentlyOptions,
   ): Promise<GetTokenSilentlyResult> {
-    const stateIn = encode(createRandomString());
-    const nonceIn = encode(createRandomString());
-    const code_verifier = createRandomString();
+    const stateIn = encode(createSecureRandomString());
+    const nonceIn = encode(createSecureRandomString());
+    const code_verifier = createSecureRandomString();
     const code_challengeBuffer = await sha256(code_verifier);
     const code_challenge = bufferToBase64UrlEncoded(code_challengeBuffer);
 

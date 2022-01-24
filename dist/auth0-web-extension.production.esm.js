@@ -90,6 +90,36 @@ function __generator(thisArg, body) {
     }
 }
 
+function __values(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+}
+
+function __spreadArray(to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+}
+
+function __asyncValues(o) {
+    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
+    var m = o[Symbol.asyncIterator], i;
+    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
+    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
+    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
+}
+
 var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
 
 var browserPolyfill = {exports: {}};
@@ -1358,6 +1388,66 @@ var browserPolyfill = {exports: {}};
 
 var browser$1 = browserPolyfill.exports;
 
+var ProcessLocking = /** @class */ (function () {
+    function ProcessLocking() {
+        var _this = this;
+        this.locked = new Map();
+        this.addToLocked = function (key, toAdd) {
+            var callbacks = _this.locked.get(key);
+            if (callbacks === undefined) {
+                if (toAdd === undefined) {
+                    _this.locked.set(key, []);
+                }
+                else {
+                    _this.locked.set(key, [toAdd]);
+                }
+            }
+            else {
+                if (toAdd !== undefined) {
+                    callbacks.unshift(toAdd);
+                    _this.locked.set(key, callbacks);
+                }
+            }
+        };
+        this.isLocked = function (key) {
+            return _this.locked.has(key);
+        };
+        this.lock = function (key) {
+            return new Promise(function (resolve, reject) {
+                if (_this.isLocked(key)) {
+                    _this.addToLocked(key, resolve);
+                }
+                else {
+                    _this.addToLocked(key);
+                    resolve();
+                }
+            });
+        };
+        this.unlock = function (key) {
+            var callbacks = _this.locked.get(key);
+            if (callbacks === undefined || callbacks.length === 0) {
+                _this.locked.delete(key);
+                return;
+            }
+            var toCall = callbacks.pop();
+            _this.locked.set(key, callbacks);
+            if (toCall !== undefined) {
+                setTimeout(toCall, 0);
+            }
+        };
+    }
+    ProcessLocking.getInstance = function () {
+        if (ProcessLocking.instance === undefined) {
+            ProcessLocking.instance = new ProcessLocking();
+        }
+        return ProcessLocking.instance;
+    };
+    return ProcessLocking;
+}());
+function getLock() {
+    return ProcessLocking.getInstance();
+}
+
 var getCrypto = function () {
     // FIXME: window is not accessible in background script
     //ie 11.x uses msCrypto
@@ -1368,7 +1458,16 @@ var getCryptoSubtle = function () {
     //safari 10.x uses webkitSubtle
     return crypto.subtle || crypto.webkitSubtle;
 };
-var createRandomString = function () {
+var createRandomString = function (length) {
+    var charset = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_~.";
+    var random = "";
+    for (var i = 0; i < length; i++) {
+        var idx = Math.floor(Math.random() * charset.length);
+        random += charset[idx];
+    }
+    return random;
+};
+var createSecureRandomString = function () {
     var charset = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_~.";
     var random = "";
     var randomValues = Array.from(getCrypto().getRandomValues(new Uint8Array(43)));
@@ -1416,10 +1515,347 @@ var bufferToBase64UrlEncoded = function (input) {
     return urlEncodeB64(encode(String.fromCharCode.apply(String, Array.from(ie11SafeInput))));
 };
 
+var LOCK_STORAGE_PREFIX = "auth0-web-extension-lock-key";
+var delay = function (ms) {
+    return new Promise(function (resolve) { return setTimeout(resolve, ms); });
+};
+var getLockId = function () {
+    return Date.now().toString() + createRandomString(15);
+};
+var Lock = /** @class */ (function () {
+    function Lock() {
+        this.waiters = undefined;
+        this.acquiredIatSet = new Set();
+        this.id = getLockId();
+        if (this.waiters === undefined) {
+            this.waiters = [];
+        }
+    }
+    Lock.prototype.acquireLock = function (key, timeout) {
+        if (timeout === void 0) { timeout = 5000; }
+        return __awaiter(this, void 0, void 0, function () {
+            var iat, maxTime, storageKey, timeoutKey, itemPostDelay, item;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        iat = Date.now() + createRandomString(4);
+                        maxTime = Date.now() + timeout;
+                        storageKey = "".concat(LOCK_STORAGE_PREFIX, "::").concat(key);
+                        _a.label = 1;
+                    case 1:
+                        if (!(Date.now() < maxTime)) return [3 /*break*/, 11];
+                        return [4 /*yield*/, delay(30)];
+                    case 2:
+                        _a.sent();
+                        return [4 /*yield*/, this.hasKey(storageKey)];
+                    case 3:
+                        if (!_a.sent()) return [3 /*break*/, 6];
+                        return [4 /*yield*/, this.lockCorrector()];
+                    case 4:
+                        _a.sent();
+                        return [4 /*yield*/, this.waitForSomethingToChange(maxTime)];
+                    case 5:
+                        _a.sent();
+                        return [3 /*break*/, 10];
+                    case 6:
+                        timeoutKey = "".concat(this.id, "::").concat(key, "::").concat(iat);
+                        return [4 /*yield*/, this.setItem(storageKey, JSON.stringify({
+                                id: this.id,
+                                iat: iat,
+                                timeoutKey: timeoutKey,
+                                timeAcquired: Date.now(),
+                                timeRefreshed: Date.now(),
+                            }))];
+                    case 7:
+                        _a.sent();
+                        return [4 /*yield*/, delay(30)];
+                    case 8:
+                        _a.sent();
+                        return [4 /*yield*/, this.getItem(storageKey)];
+                    case 9:
+                        itemPostDelay = _a.sent();
+                        if (itemPostDelay !== null) {
+                            item = JSON.parse(itemPostDelay);
+                            if (item.id === this.id && item.iat === iat) {
+                                this.acquiredIatSet.add(iat);
+                                this.refreshLock(key, iat);
+                                return [2 /*return*/, true];
+                            }
+                        }
+                        _a.label = 10;
+                    case 10:
+                        iat = Date.now() + createRandomString(4);
+                        return [3 /*break*/, 1];
+                    case 11: return [2 /*return*/, false];
+                }
+            });
+        });
+    };
+    Lock.prototype.releaseLock = function (key) {
+        return __awaiter(this, void 0, void 0, function () {
+            var storageKey, lockObj, parsed;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        storageKey = "".concat(LOCK_STORAGE_PREFIX, "::").concat(key);
+                        return [4 /*yield*/, this.getItem(storageKey)];
+                    case 1:
+                        lockObj = _a.sent();
+                        if (lockObj === null) {
+                            return [2 /*return*/];
+                        }
+                        parsed = JSON.parse(lockObj);
+                        if (!(parsed.id === this.id)) return [3 /*break*/, 4];
+                        return [4 /*yield*/, getLock().lock(parsed.iat)];
+                    case 2:
+                        _a.sent();
+                        this.acquiredIatSet.delete(parsed.iat);
+                        return [4 /*yield*/, this.removeItem(storageKey)];
+                    case 3:
+                        _a.sent();
+                        getLock().unlock(parsed.iat);
+                        this.notifyWaiters();
+                        _a.label = 4;
+                    case 4: return [2 /*return*/];
+                }
+            });
+        });
+    };
+    Lock.prototype.refreshLock = function (key, iat) {
+        return __awaiter(this, void 0, void 0, function () {
+            var _this = this;
+            return __generator(this, function (_a) {
+                setTimeout(function () { return __awaiter(_this, void 0, void 0, function () {
+                    var item, parsed;
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0: return [4 /*yield*/, getLock().lock(iat)];
+                            case 1:
+                                _a.sent();
+                                if (!this.acquiredIatSet.has(iat)) {
+                                    getLock().unlock(iat);
+                                    return [2 /*return*/];
+                                }
+                                return [4 /*yield*/, this.getItem(key)];
+                            case 2:
+                                item = _a.sent();
+                                if (!(item !== null)) return [3 /*break*/, 4];
+                                parsed = JSON.parse(item);
+                                parsed.timeRefreshed = Date.now();
+                                return [4 /*yield*/, this.setItem(key, JSON.stringify(parsed))];
+                            case 3:
+                                _a.sent();
+                                getLock().unlock(iat);
+                                return [3 /*break*/, 5];
+                            case 4:
+                                getLock().unlock(iat);
+                                return [2 /*return*/];
+                            case 5:
+                                this.refreshLock(key, iat);
+                                return [2 /*return*/];
+                        }
+                    });
+                }); }, 1000);
+                return [2 /*return*/];
+            });
+        });
+    };
+    Lock.prototype.lockCorrector = function () {
+        var e_1, _a;
+        return __awaiter(this, void 0, void 0, function () {
+            var minTime, keys, notifyWaiters, keys_1, keys_1_1, key, lockObj, parsed, e_1_1;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        minTime = Date.now() - 5000;
+                        return [4 /*yield*/, this.allKeys()];
+                    case 1:
+                        keys = _b.sent();
+                        notifyWaiters = false;
+                        _b.label = 2;
+                    case 2:
+                        _b.trys.push([2, 8, 9, 14]);
+                        keys_1 = __asyncValues(keys);
+                        _b.label = 3;
+                    case 3: return [4 /*yield*/, keys_1.next()];
+                    case 4:
+                        if (!(keys_1_1 = _b.sent(), !keys_1_1.done)) return [3 /*break*/, 7];
+                        key = keys_1_1.value;
+                        if (!key.includes(LOCK_STORAGE_PREFIX)) return [3 /*break*/, 6];
+                        return [4 /*yield*/, this.getItem(key)];
+                    case 5:
+                        lockObj = _b.sent();
+                        if (lockObj !== null) {
+                            parsed = JSON.parse(lockObj);
+                            if ((parsed.timeRefreshed === undefined && parsed.timeAcquired < minTime) ||
+                                (parsed.timeRefreshed !== undefined && parsed.timeRefreshed < minTime)) {
+                                this.removeItem(key);
+                                notifyWaiters = true;
+                            }
+                        }
+                        _b.label = 6;
+                    case 6: return [3 /*break*/, 3];
+                    case 7: return [3 /*break*/, 14];
+                    case 8:
+                        e_1_1 = _b.sent();
+                        e_1 = { error: e_1_1 };
+                        return [3 /*break*/, 14];
+                    case 9:
+                        _b.trys.push([9, , 12, 13]);
+                        if (!(keys_1_1 && !keys_1_1.done && (_a = keys_1.return))) return [3 /*break*/, 11];
+                        return [4 /*yield*/, _a.call(keys_1)];
+                    case 10:
+                        _b.sent();
+                        _b.label = 11;
+                    case 11: return [3 /*break*/, 13];
+                    case 12:
+                        if (e_1) throw e_1.error;
+                        return [7 /*endfinally*/];
+                    case 13: return [7 /*endfinally*/];
+                    case 14:
+                        if (notifyWaiters) {
+                            this.notifyWaiters();
+                        }
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    Lock.prototype.waitForSomethingToChange = function (maxTime) {
+        return __awaiter(this, void 0, void 0, function () {
+            var _this = this;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, new Promise(function (resolve) {
+                            var resolveCalled = false;
+                            var startedAt = Date.now();
+                            var minTime = 50;
+                            var removedListeners = false;
+                            var stopWaiting = function () {
+                                if (!removedListeners) {
+                                    browser$1.storage.onChanged.removeListener(stopWaiting);
+                                    _this.removeFromWaiting(stopWaiting);
+                                    clearTimeout(timeoutId);
+                                    removedListeners = true;
+                                }
+                                if (!resolveCalled) {
+                                    resolveCalled = true;
+                                    var timeToWait = minTime - (Date.now() - startedAt);
+                                    if (timeToWait > 0) {
+                                        setTimeout(resolve, timeToWait);
+                                    }
+                                    else {
+                                        resolve();
+                                    }
+                                }
+                            };
+                            browser$1.storage.onChanged.addListener(stopWaiting);
+                            _this.addToWaiting(stopWaiting);
+                            var timeoutId = setTimeout(stopWaiting, Math.max(0, maxTime - Date.now()));
+                        })];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    Lock.prototype.addToWaiting = function (func) {
+        this.removeFromWaiting(func);
+        if (this.waiters === undefined) {
+            return;
+        }
+        this.waiters.push(func);
+    };
+    Lock.prototype.removeFromWaiting = function (func) {
+        if (this.waiters === undefined) {
+            return;
+        }
+        this.waiters = this.waiters.filter(function (i) { return i !== func; });
+    };
+    Lock.prototype.notifyWaiters = function () {
+        if (this.waiters === undefined) {
+            return;
+        }
+        __spreadArray([], this.waiters, true).forEach(function (i) { return i(); });
+    };
+    Lock.prototype.allKeys = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var items;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, browser$1.storage.local.get(null)];
+                    case 1:
+                        items = _a.sent();
+                        return [2 /*return*/, Object.keys(items)];
+                }
+            });
+        });
+    };
+    Lock.prototype.hasKey = function (key) {
+        return __awaiter(this, void 0, void 0, function () {
+            var item;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, browser$1.storage.local.get(key)];
+                    case 1:
+                        item = _a.sent();
+                        return [2 /*return*/, Boolean(item === null || item === void 0 ? void 0 : item[key])];
+                }
+            });
+        });
+    };
+    Lock.prototype.setItem = function (key, value) {
+        return __awaiter(this, void 0, void 0, function () {
+            var _a;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0: return [4 /*yield*/, browser$1.storage.local.set((_a = {}, _a[key] = value, _a))];
+                    case 1: return [2 /*return*/, _b.sent()];
+                }
+            });
+        });
+    };
+    Lock.prototype.getItem = function (key) {
+        return __awaiter(this, void 0, void 0, function () {
+            var item;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, browser$1.storage.local.get(key)];
+                    case 1:
+                        item = _a.sent();
+                        return [2 /*return*/, (item === null || item === void 0 ? void 0 : item[key]) || null];
+                }
+            });
+        });
+    };
+    Lock.prototype.removeItem = function (key) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, browser$1.storage.local.remove(key)];
+                    case 1: return [2 /*return*/, _a.sent()];
+                }
+            });
+        });
+    };
+    return Lock;
+}());
+
 var DEFAULT_SCOPE = "openid profile email";
 var PARENT_PORT_NAME = "auth0-web-extension::parent";
 var CHILD_PORT_NAME = "auth0-web-extension::child";
 var CACHE_LOCATION_MEMORY = "memory";
+var RECOVERABLE_ERRORS = [
+    'login_required',
+    'consent_required',
+    'interaction_required',
+    'account_selection_required',
+    // Strictly speaking the user can't recover from `access_denied` - but they
+    // can get more information about their access being denied by logging in
+    // interactively.
+    'access_denied'
+];
 var DEFAULT_FETCH_TIMEOUT_MS = 10000;
 var DEFAULT_SILENT_TOKEN_RETRY_COUNT = 3;
 var DEFAULT_NOW_PROVIDER = function () { return Date.now(); };
@@ -2085,7 +2521,47 @@ var CacheKeyManifest = /** @class */ (function () {
     return CacheKeyManifest;
 }());
 
+var singlePromiseMap = {};
+var singlePromise = function (cb, key) {
+    var promise = singlePromiseMap[key];
+    if (!promise) {
+        promise = cb().finally(function () {
+            delete singlePromiseMap[key];
+            promise = undefined;
+        });
+        singlePromiseMap[key] = promise;
+    }
+    return promise;
+};
+var retryPromise = function (cb, maxNumberOfRetries) {
+    if (maxNumberOfRetries === void 0) { maxNumberOfRetries = 3; }
+    return __awaiter(void 0, void 0, void 0, function () {
+        var i;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    i = 0;
+                    _a.label = 1;
+                case 1:
+                    if (!(i < maxNumberOfRetries)) return [3 /*break*/, 4];
+                    return [4 /*yield*/, cb()];
+                case 2:
+                    if (_a.sent()) {
+                        return [2 /*return*/, true];
+                    }
+                    _a.label = 3;
+                case 3:
+                    i++;
+                    return [3 /*break*/, 1];
+                case 4: return [2 /*return*/, false];
+            }
+        });
+    });
+};
+
 var _a;
+var lock = new Lock();
+var GET_TOKEN_SILENTLY_LOCK_KEY = "auth0.lock.getTokenSilently";
 /**
  * Auth0 SDK for Background Scripts in a Web Extension
  */
@@ -2160,12 +2636,18 @@ var Auth0Client = /** @class */ (function () {
                     case 0:
                         audience = options.audience || this.options.audience || "default";
                         scope = getUniqueScopes(this.defaultScope, this.scope, options.scope);
+                        return [4 /*yield*/, this.checkSession({
+                                audience: audience,
+                                scope: scope,
+                            })];
+                    case 1:
+                        _b.sent();
                         return [4 /*yield*/, this.cacheManager.get(new CacheKey({
                                 client_id: this.options.client_id,
                                 audience: audience,
                                 scope: scope,
                             }))];
-                    case 1:
+                    case 2:
                         cache = _b.sent();
                         return [2 /*return*/, (_a = cache === null || cache === void 0 ? void 0 : cache.decodedToken) === null || _a === void 0 ? void 0 : _a.user];
                 }
@@ -2229,6 +2711,28 @@ var Auth0Client = /** @class */ (function () {
             });
         });
     };
+    Auth0Client.prototype.checkSession = function (options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var error_1;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        _a.trys.push([0, 2, , 3]);
+                        return [4 /*yield*/, this.getTokenSilently(options)];
+                    case 1:
+                        _a.sent();
+                        return [3 /*break*/, 3];
+                    case 2:
+                        error_1 = _a.sent();
+                        if (!RECOVERABLE_ERRORS.includes(error_1.error)) {
+                            throw error_1;
+                        }
+                        return [3 /*break*/, 3];
+                    case 3: return [2 /*return*/];
+                }
+            });
+        });
+    };
     // TODO: Return verbose response if detailedResponse = true
     /**
      * Fetches a new access token
@@ -2242,20 +2746,18 @@ var Auth0Client = /** @class */ (function () {
     Auth0Client.prototype.getTokenSilently = function (options) {
         if (options === void 0) { options = {}; }
         return __awaiter(this, void 0, void 0, function () {
+            var _this = this;
             return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this._getTokenSilently(__assign(__assign({ audience: this.options.audience, ignoreCache: false }, options), { scope: getUniqueScopes(this.defaultScope, this.scope, options.scope) }))];
-                    case 1: 
-                    // FIXME: Should use keyed singlePromise like is auth0-spa-js
-                    return [2 /*return*/, _a.sent()];
-                }
+                return [2 /*return*/, singlePromise(function () {
+                        return _this._getTokenSilently(__assign(__assign({ audience: _this.options.audience, ignoreCache: false }, options), { scope: getUniqueScopes(_this.defaultScope, _this.scope, options.scope) }));
+                    }, "".concat(this.options.client_id, "::").concat(this.options.audience, "::").concat(getUniqueScopes(this.defaultScope, this.scope, options.scope)))];
             });
         });
     };
     Auth0Client.prototype._getTokenSilently = function (options) {
         if (options === void 0) { options = {}; }
         return __awaiter(this, void 0, void 0, function () {
-            var ignoreCache, getTokenOptions, entry, authResult, _a, id_token, access_token, oauthTokenScope, expires_in;
+            var ignoreCache, getTokenOptions, entry, entry, authResult, _a, id_token, access_token, oauthTokenScope, expires_in;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
@@ -2273,22 +2775,41 @@ var Auth0Client = /** @class */ (function () {
                             return [2 /*return*/, entry];
                         }
                         _b.label = 2;
-                    case 2:
-                        if (!this.options.useRefreshTokens) return [3 /*break*/, 4];
-                        return [4 /*yield*/, this._getTokenUsingRefreshToken(getTokenOptions)];
+                    case 2: return [4 /*yield*/, retryPromise(function () { return lock.acquireLock(GET_TOKEN_SILENTLY_LOCK_KEY, 5000); }, 10)];
                     case 3:
-                        _a = _b.sent();
-                        return [3 /*break*/, 6];
-                    case 4: return [4 /*yield*/, this._getTokenFromIfFrame(getTokenOptions)];
+                        if (!_b.sent()) return [3 /*break*/, 15];
+                        _b.label = 4;
+                    case 4:
+                        _b.trys.push([4, , 12, 14]);
+                        if (!(!ignoreCache && getTokenOptions.scope)) return [3 /*break*/, 6];
+                        return [4 /*yield*/, this._getEntryFromCache({
+                                scope: getTokenOptions.scope,
+                                audience: getTokenOptions.audience || "default",
+                                client_id: this.options.client_id,
+                                getDetailedEntry: options.detailedResponse,
+                            })];
                     case 5:
-                        _a = _b.sent();
+                        entry = _b.sent();
+                        if (entry) {
+                            return [2 /*return*/, entry];
+                        }
                         _b.label = 6;
                     case 6:
+                        if (!this.options.useRefreshTokens) return [3 /*break*/, 8];
+                        return [4 /*yield*/, this._getTokenUsingRefreshToken(getTokenOptions)];
+                    case 7:
+                        _a = _b.sent();
+                        return [3 /*break*/, 10];
+                    case 8: return [4 /*yield*/, this._getTokenFromIfFrame(getTokenOptions)];
+                    case 9:
+                        _a = _b.sent();
+                        _b.label = 10;
+                    case 10:
                         authResult = _a;
                         return [4 /*yield*/, this.cacheManager.set(__assign({ client_id: this.options.client_id }, authResult))
                             // TODO: Save to cookies
                         ];
-                    case 7:
+                    case 11:
                         _b.sent();
                         // TODO: Save to cookies
                         if (options.detailedResponse) {
@@ -2296,6 +2817,13 @@ var Auth0Client = /** @class */ (function () {
                             return [2 /*return*/, __assign(__assign({ id_token: id_token, access_token: access_token }, (oauthTokenScope ? { scope: oauthTokenScope } : null)), { expires_in: expires_in })];
                         }
                         return [2 /*return*/, authResult.access_token];
+                    case 12: return [4 /*yield*/, lock.releaseLock(GET_TOKEN_SILENTLY_LOCK_KEY)];
+                    case 13:
+                        _b.sent();
+                        return [7 /*endfinally*/];
+                    case 14: return [3 /*break*/, 16];
+                    case 15: throw new TimeoutError();
+                    case 16: return [2 /*return*/];
                 }
             });
         });
@@ -2314,9 +2842,9 @@ var Auth0Client = /** @class */ (function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        stateIn = encode(createRandomString());
-                        nonceIn = encode(createRandomString());
-                        code_verifier = createRandomString();
+                        stateIn = encode(createSecureRandomString());
+                        nonceIn = encode(createSecureRandomString());
+                        code_verifier = createSecureRandomString();
                         return [4 /*yield*/, sha256(code_verifier)];
                     case 1:
                         code_challengeBuffer = _a.sent();
