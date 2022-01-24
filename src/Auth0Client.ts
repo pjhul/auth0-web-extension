@@ -26,6 +26,7 @@ import {
   CACHE_LOCATION_MEMORY,
   CHILD_PORT_NAME,
   PARENT_PORT_NAME,
+  RECOVERABLE_ERRORS,
 } from "./constants"
 
 import {
@@ -43,6 +44,7 @@ import {
   IdToken,
   GetIdTokenClaimsOptions,
 } from "./global"
+import {GenericError} from "src"
 
 /**
  * Auth0 SDK for Background Scripts in a Web Extension
@@ -240,6 +242,18 @@ export default class Auth0Client {
     return Boolean(user);
   }
 
+  public async checkSession(options?: GetTokenSilentlyOptions) {
+    // Ignore cookies for now
+
+    try {
+      await this.getTokenSilently(options);
+    } catch(error) {
+      if(!RECOVERABLE_ERRORS.includes((error as any).error)) {
+        throw error;
+      }
+    }
+  }
+
   public async getTokenSilently(
     options: GetTokenSilentlyOptions & { detailedResponse: true }
   ): Promise<GetTokenSilentlyVerboseResult>
@@ -407,50 +421,55 @@ export default class Auth0Client {
     authorizeUrl: string,
     timeoutInSeconds?: number,
   ): Promise<AuthenticationResult> {
-
     const queryOptions = { currentWindow: true };
     let tabs = await browser.tabs.query(queryOptions);
 
-    for(let tab of tabs) {
+    for await (let tab of tabs) {
       if(tab.id) {
-        const parentPort = browser.tabs.connect(tab.id, { name: PARENT_PORT_NAME });
+        const { id } = tab;
 
-        // Should be careful here that we don't accidentally connect to a different content script with an onConnect
-        // handler. Maybe wait for a specific acknowledge message?
-        if(browser.runtime.lastError) {
-          continue;
-        } else {
-          return new Promise((resolve, reject) => {
-            const handler = (childPort: browser.Runtime.Port) => {
-              if(childPort.name === CHILD_PORT_NAME) {
-                childPort.onMessage.addListener(message => {
-                  resolve(message);
+        try {
+          const resp = await browser.tabs.sendMessage(id, "auth_start");
 
-                  childPort.disconnect();
-                  parentPort.disconnect();
+          if(browser.runtime.lastError) {
+            continue;
+          } else if(resp === "ack") {
+            return new Promise((resolve, reject) => {
+              const parentPort = browser.tabs.connect(id, { name: PARENT_PORT_NAME });
 
-                  browser.runtime.onConnect.removeListener(handler);
-                });
+              const handler = (childPort: browser.Runtime.Port) => {
+                if(childPort.name === CHILD_PORT_NAME) {
+                  childPort.onMessage.addListener(message => {
+                    resolve(message);
 
-                childPort.postMessage({
-                  authorizeUrl,
-                  domainUrl: this.domainUrl,
-                });
+                    childPort.disconnect();
+                    parentPort.disconnect();
+
+                    browser.runtime.onConnect.removeListener(handler);
+                  });
+
+                  childPort.postMessage({
+                    authorizeUrl,
+                    domainUrl: this.domainUrl,
+                  });
+                }
               }
-            }
 
-            browser.runtime.onConnect.addListener(handler)
-            parentPort.postMessage({});
+              browser.runtime.onConnect.addListener(handler)
+              parentPort.postMessage({});
 
-            if(browser.runtime.lastError) {
-              reject(browser.runtime.lastError);
-            }
-          });
+              if(browser.runtime.lastError) {
+                reject(browser.runtime.lastError);
+              }
+            });
+          }
+        } catch(error) {
+          continue;
         }
       }
     }
 
-    throw "There are no tabs with content scripts running to connect to.";
+    throw new GenericError("no_scripts", "There are no tabs with content scripts running to connect to.");
   }
 
   private async _verifyIdToken(

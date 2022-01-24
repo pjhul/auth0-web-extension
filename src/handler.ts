@@ -16,6 +16,10 @@ import {
 
 // We can probably pull redirectUri from background script at some point
 export function handleTokenRequest(redirectUri: string) {
+  browser.runtime.onMessage.addListener(() => {
+    return Promise.resolve("ack")
+  });
+
   if(window.location.origin === redirectUri) {
     const port = browser.runtime.connect(undefined, { name: CHILD_PORT_NAME })
 

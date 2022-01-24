@@ -90,6 +90,26 @@ function __generator(thisArg, body) {
     }
 }
 
+function __values(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+}
+
+function __asyncValues(o) {
+    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
+    var m = o[Symbol.asyncIterator], i;
+    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
+    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
+    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
+}
+
 var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
 
 var browserPolyfill = {exports: {}};
@@ -1358,6 +1378,185 @@ var browserPolyfill = {exports: {}};
 
 var browser$1 = browserPolyfill.exports;
 
+var DEFAULT_SCOPE = "openid profile email";
+var PARENT_PORT_NAME = "auth0-web-extension::parent";
+var CHILD_PORT_NAME = "auth0-web-extension::child";
+var RECOVERABLE_ERRORS = [
+    "no_scripts",
+    "login_required",
+    "consent_required",
+    "interaction_required",
+    "account_selection_required",
+    // Strictly speaking the user can"t recover from `access_denied` - but they
+    // can get more information about their access being denied by logging in
+    // interactively.
+    "access_denied"
+];
+var CACHE_LOCATION_MEMORY = "memory";
+var DEFAULT_FETCH_TIMEOUT_MS = 10000;
+var DEFAULT_SILENT_TOKEN_RETRY_COUNT = 3;
+var DEFAULT_NOW_PROVIDER = function () { return Date.now(); };
+
+/**
+ * For context on the istanbul ignore statements below, see:
+ * https://github.com/gotwarlost/istanbul/issues/690
+ */
+/**
+ * Thrown when network requests to the Auth server fail.
+ */
+var GenericError = /** @class */ (function (_super) {
+    __extends(GenericError, _super);
+    function GenericError(error, error_description) {
+        var _this = _super.call(this, error_description) || this;
+        _this.error = error;
+        _this.error_description = error_description;
+        Object.setPrototypeOf(_this, GenericError.prototype);
+        return _this;
+    }
+    GenericError.fromPayload = function (_a) {
+        var error = _a.error, error_description = _a.error_description;
+        return new GenericError(error, error_description);
+    };
+    return GenericError;
+}(Error));
+/**
+ * Thrown when handling the redirect callback fails, will be one of Auth0's
+ * Authentication API's Standard Error Responses: https://auth0.com/docs/api/authentication?javascript#standard-error-responses
+ */
+var AuthenticationError = /** @class */ (function (_super) {
+    __extends(AuthenticationError, _super);
+    function AuthenticationError(error, error_description, state, appState) {
+        if (appState === void 0) { appState = null; }
+        var _this = _super.call(this, error, error_description) || this;
+        _this.state = state;
+        _this.appState = appState;
+        //https://github.com/Microsoft/TypeScript-wiki/blob/master/Breaking-Changes.md#extending-built-ins-like-error-array-and-map-may-no-longer-work
+        Object.setPrototypeOf(_this, AuthenticationError.prototype);
+        return _this;
+    }
+    return AuthenticationError;
+}(GenericError));
+/**
+ * Thrown when silent auth times out (usually due to a configuration issue) or
+ * when network requests to the Auth server timeout.
+ */
+var TimeoutError = /** @class */ (function (_super) {
+    __extends(TimeoutError, _super);
+    function TimeoutError() {
+        var _this = _super.call(this, 'timeout', 'Timeout') || this;
+        //https://github.com/Microsoft/TypeScript-wiki/blob/master/Breaking-Changes.md#extending-built-ins-like-error-array-and-map-may-no-longer-work
+        Object.setPrototypeOf(_this, TimeoutError.prototype);
+        return _this;
+    }
+    return TimeoutError;
+}(GenericError));
+/**
+ * Error thrown when the token exchange results in a `mfa_required` error
+ */
+var MfaRequiredError = /** @class */ (function (_super) {
+    __extends(MfaRequiredError, _super);
+    function MfaRequiredError(error, error_description, mfa_token) {
+        var _this = _super.call(this, error, error_description) || this;
+        _this.mfa_token = mfa_token;
+        //https://github.com/Microsoft/TypeScript-wiki/blob/master/Breaking-Changes.md#extending-built-ins-like-error-array-and-map-may-no-longer-work
+        Object.setPrototypeOf(_this, MfaRequiredError.prototype);
+        return _this;
+    }
+    return MfaRequiredError;
+}(GenericError));
+
+// We can probably pull redirectUri from background script at some point
+function handleTokenRequest(redirectUri) {
+    var _this = this;
+    browser$1.runtime.onMessage.addListener(function () {
+        return Promise.resolve("ack");
+    });
+    if (window.location.origin === redirectUri) {
+        var port = browser$1.runtime.connect(undefined, { name: CHILD_PORT_NAME });
+        var handler = function (message, port) { return __awaiter(_this, void 0, void 0, function () {
+            var authorizeUrl, domainUrl, codeResult;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!(port.name === CHILD_PORT_NAME)) return [3 /*break*/, 2];
+                        authorizeUrl = message.authorizeUrl, domainUrl = message.domainUrl;
+                        return [4 /*yield*/, runIFrame(authorizeUrl, domainUrl, 60)];
+                    case 1:
+                        codeResult = _a.sent();
+                        port.postMessage(codeResult);
+                        _a.label = 2;
+                    case 2: return [2 /*return*/];
+                }
+            });
+        }); };
+        port.onMessage.addListener(handler);
+    }
+    else {
+        browser$1.runtime.onConnect.addListener(function (port) {
+            if (port.name === PARENT_PORT_NAME) {
+                var handler_1 = function () {
+                    var iframe = document.createElement("iframe");
+                    iframe.setAttribute("width", "0");
+                    iframe.setAttribute("height", "0");
+                    iframe.style.display = "none";
+                    document.body.appendChild(iframe);
+                    iframe.setAttribute("src", redirectUri);
+                    port.onMessage.removeListener(handler_1);
+                    port.onDisconnect.addListener(function () {
+                        window.document.body.removeChild(iframe);
+                    });
+                };
+                port.onMessage.addListener(handler_1);
+            }
+        });
+    }
+}
+var runIFrame = function (authorizeUrl, eventOrigin, timeoutInSeconds) {
+    if (timeoutInSeconds === void 0) { timeoutInSeconds = 60; }
+    return __awaiter(void 0, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            return [2 /*return*/, new Promise(function (res, rej) {
+                    var iframe = window.document.createElement("iframe");
+                    iframe.setAttribute("width", "0");
+                    iframe.setAttribute("height", "0");
+                    iframe.style.display = "none";
+                    var removeIframe = function () {
+                        if (window.document.body.contains(iframe)) {
+                            window.document.body.removeChild(iframe);
+                            window.removeEventListener("message", iframeEventHandler, false);
+                        }
+                    };
+                    var iframeEventHandler;
+                    var timeoutSetTimeoutId = setTimeout(function () {
+                        rej(new TimeoutError());
+                        removeIframe();
+                    }, timeoutInSeconds * 1000);
+                    iframeEventHandler = function (e) {
+                        if (e.origin != eventOrigin)
+                            return;
+                        if (!e.data || e.data.type !== "authorization_response")
+                            return;
+                        var eventSource = e.source;
+                        if (eventSource) {
+                            eventSource.close();
+                        }
+                        e.data.response.error
+                            ? rej(GenericError.fromPayload(e.data.response))
+                            : res(e.data.response);
+                        clearTimeout(timeoutSetTimeoutId);
+                        window.removeEventListener("message", iframeEventHandler, false);
+                        // Delay the removal of the iframe to prevent hanging loading state
+                        // in Chrome: https://github.com/auth0/auth0-spa-js/issues/240
+                        setTimeout(removeIframe, 2 * 1000);
+                    };
+                    window.addEventListener("message", iframeEventHandler, false);
+                    window.document.body.appendChild(iframe);
+                    iframe.setAttribute("src", authorizeUrl);
+                })];
+        });
+    });
+};
+
 var getCrypto = function () {
     // FIXME: window is not accessible in background script
     //ie 11.x uses msCrypto
@@ -1415,82 +1614,6 @@ var bufferToBase64UrlEncoded = function (input) {
     var ie11SafeInput = new Uint8Array(input);
     return urlEncodeB64(encode(String.fromCharCode.apply(String, Array.from(ie11SafeInput))));
 };
-
-var DEFAULT_SCOPE = "openid profile email";
-var PARENT_PORT_NAME = "auth0-web-extension::parent";
-var CHILD_PORT_NAME = "auth0-web-extension::child";
-var CACHE_LOCATION_MEMORY = "memory";
-var DEFAULT_FETCH_TIMEOUT_MS = 10000;
-var DEFAULT_SILENT_TOKEN_RETRY_COUNT = 3;
-var DEFAULT_NOW_PROVIDER = function () { return Date.now(); };
-
-/**
- * For context on the istanbul ignore statements below, see:
- * https://github.com/gotwarlost/istanbul/issues/690
- */
-/**
- * Thrown when network requests to the Auth server fail.
- */
-var GenericError = /** @class */ (function (_super) {
-    __extends(GenericError, _super);
-    function GenericError(error, error_description) {
-        var _this = _super.call(this, error_description) || this;
-        _this.error = error;
-        _this.error_description = error_description;
-        Object.setPrototypeOf(_this, GenericError.prototype);
-        return _this;
-    }
-    GenericError.fromPayload = function (_a) {
-        var error = _a.error, error_description = _a.error_description;
-        return new GenericError(error, error_description);
-    };
-    return GenericError;
-}(Error));
-/**
- * Thrown when handling the redirect callback fails, will be one of Auth0's
- * Authentication API's Standard Error Responses: https://auth0.com/docs/api/authentication?javascript#standard-error-responses
- */
-/** @class */ ((function (_super) {
-    __extends(AuthenticationError, _super);
-    function AuthenticationError(error, error_description, state, appState) {
-        if (appState === void 0) { appState = null; }
-        var _this = _super.call(this, error, error_description) || this;
-        _this.state = state;
-        _this.appState = appState;
-        //https://github.com/Microsoft/TypeScript-wiki/blob/master/Breaking-Changes.md#extending-built-ins-like-error-array-and-map-may-no-longer-work
-        Object.setPrototypeOf(_this, AuthenticationError.prototype);
-        return _this;
-    }
-    return AuthenticationError;
-})(GenericError));
-/**
- * Thrown when silent auth times out (usually due to a configuration issue) or
- * when network requests to the Auth server timeout.
- */
-var TimeoutError = /** @class */ (function (_super) {
-    __extends(TimeoutError, _super);
-    function TimeoutError() {
-        var _this = _super.call(this, 'timeout', 'Timeout') || this;
-        //https://github.com/Microsoft/TypeScript-wiki/blob/master/Breaking-Changes.md#extending-built-ins-like-error-array-and-map-may-no-longer-work
-        Object.setPrototypeOf(_this, TimeoutError.prototype);
-        return _this;
-    }
-    return TimeoutError;
-}(GenericError));
-/**
- * Error thrown when the token exchange results in a `mfa_required` error
- */
-var MfaRequiredError = /** @class */ (function (_super) {
-    __extends(MfaRequiredError, _super);
-    function MfaRequiredError(error, error_description, mfa_token) {
-        var _this = _super.call(this, error, error_description) || this;
-        _this.mfa_token = mfa_token;
-        //https://github.com/Microsoft/TypeScript-wiki/blob/master/Breaking-Changes.md#extending-built-ins-like-error-array-and-map-may-no-longer-work
-        Object.setPrototypeOf(_this, MfaRequiredError.prototype);
-        return _this;
-    }
-    return MfaRequiredError;
-}(GenericError));
 
 var createAbortController = function () { return new AbortController(); };
 var dofetch = function (fetchUrl, fetchOptions) { return __awaiter(void 0, void 0, void 0, function () {
@@ -2229,6 +2352,28 @@ var Auth0Client = /** @class */ (function () {
             });
         });
     };
+    Auth0Client.prototype.checkSession = function (options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var error_1;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        _a.trys.push([0, 2, , 3]);
+                        return [4 /*yield*/, this.getTokenSilently(options)];
+                    case 1:
+                        _a.sent();
+                        return [3 /*break*/, 3];
+                    case 2:
+                        error_1 = _a.sent();
+                        if (!RECOVERABLE_ERRORS.includes(error_1.error)) {
+                            throw error_1;
+                        }
+                        return [3 /*break*/, 3];
+                    case 3: return [2 /*return*/];
+                }
+            });
+        });
+    };
     // TODO: Return verbose response if detailedResponse = true
     /**
      * Fetches a new access token
@@ -2349,56 +2494,84 @@ var Auth0Client = /** @class */ (function () {
         });
     };
     Auth0Client.prototype._performContentScriptHandshake = function (authorizeUrl, timeoutInSeconds) {
+        var e_2, _a;
         return __awaiter(this, void 0, void 0, function () {
-            var queryOptions, tabs, _loop_1, _i, tabs_1, tab, state_1;
+            var queryOptions, tabs, tabs_1, tabs_1_1, tab, id_1, resp, e_2_1;
             var _this = this;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0:
                         queryOptions = { currentWindow: true };
                         return [4 /*yield*/, browser$1.tabs.query(queryOptions)];
                     case 1:
-                        tabs = _a.sent();
-                        _loop_1 = function (tab) {
-                            if (tab.id) {
-                                var parentPort_1 = browser$1.tabs.connect(tab.id, { name: PARENT_PORT_NAME });
-                                // Should be careful here that we don't accidentally connect to a different content script with an onConnect
-                                // handler. Maybe wait for a specific acknowledge message?
-                                if (browser$1.runtime.lastError) {
-                                    return "continue";
-                                }
-                                else {
-                                    return { value: new Promise(function (resolve, reject) {
-                                            var handler = function (childPort) {
-                                                if (childPort.name === CHILD_PORT_NAME) {
-                                                    childPort.onMessage.addListener(function (message) {
-                                                        resolve(message);
-                                                        childPort.disconnect();
-                                                        parentPort_1.disconnect();
-                                                        browser$1.runtime.onConnect.removeListener(handler);
-                                                    });
-                                                    childPort.postMessage({
-                                                        authorizeUrl: authorizeUrl,
-                                                        domainUrl: _this.domainUrl,
-                                                    });
-                                                }
-                                            };
-                                            browser$1.runtime.onConnect.addListener(handler);
-                                            parentPort_1.postMessage({});
-                                            if (browser$1.runtime.lastError) {
-                                                reject(browser$1.runtime.lastError);
-                                            }
-                                        }) };
-                                }
-                            }
-                        };
-                        for (_i = 0, tabs_1 = tabs; _i < tabs_1.length; _i++) {
-                            tab = tabs_1[_i];
-                            state_1 = _loop_1(tab);
-                            if (typeof state_1 === "object")
-                                return [2 /*return*/, state_1.value];
+                        tabs = _b.sent();
+                        _b.label = 2;
+                    case 2:
+                        _b.trys.push([2, 10, 11, 16]);
+                        tabs_1 = __asyncValues(tabs);
+                        _b.label = 3;
+                    case 3: return [4 /*yield*/, tabs_1.next()];
+                    case 4:
+                        if (!(tabs_1_1 = _b.sent(), !tabs_1_1.done)) return [3 /*break*/, 9];
+                        tab = tabs_1_1.value;
+                        if (!tab.id) return [3 /*break*/, 8];
+                        id_1 = tab.id;
+                        _b.label = 5;
+                    case 5:
+                        _b.trys.push([5, 7, , 8]);
+                        return [4 /*yield*/, browser$1.tabs.sendMessage(id_1, "auth_start")];
+                    case 6:
+                        resp = _b.sent();
+                        if (browser$1.runtime.lastError) {
+                            return [3 /*break*/, 8];
                         }
-                        throw "There are no tabs with content scripts running to connect to.";
+                        else if (resp === "ack") {
+                            return [2 /*return*/, new Promise(function (resolve, reject) {
+                                    var parentPort = browser$1.tabs.connect(id_1, { name: PARENT_PORT_NAME });
+                                    var handler = function (childPort) {
+                                        if (childPort.name === CHILD_PORT_NAME) {
+                                            childPort.onMessage.addListener(function (message) {
+                                                resolve(message);
+                                                childPort.disconnect();
+                                                parentPort.disconnect();
+                                                browser$1.runtime.onConnect.removeListener(handler);
+                                            });
+                                            childPort.postMessage({
+                                                authorizeUrl: authorizeUrl,
+                                                domainUrl: _this.domainUrl,
+                                            });
+                                        }
+                                    };
+                                    browser$1.runtime.onConnect.addListener(handler);
+                                    parentPort.postMessage({});
+                                    if (browser$1.runtime.lastError) {
+                                        reject(browser$1.runtime.lastError);
+                                    }
+                                })];
+                        }
+                        return [3 /*break*/, 8];
+                    case 7:
+                        _b.sent();
+                        return [3 /*break*/, 8];
+                    case 8: return [3 /*break*/, 3];
+                    case 9: return [3 /*break*/, 16];
+                    case 10:
+                        e_2_1 = _b.sent();
+                        e_2 = { error: e_2_1 };
+                        return [3 /*break*/, 16];
+                    case 11:
+                        _b.trys.push([11, , 14, 15]);
+                        if (!(tabs_1_1 && !tabs_1_1.done && (_a = tabs_1.return))) return [3 /*break*/, 13];
+                        return [4 /*yield*/, _a.call(tabs_1)];
+                    case 12:
+                        _b.sent();
+                        _b.label = 13;
+                    case 13: return [3 /*break*/, 15];
+                    case 14:
+                        if (e_2) throw e_2.error;
+                        return [7 /*endfinally*/];
+                    case 15: return [7 /*endfinally*/];
+                    case 16: throw new GenericError("no_scripts", "There are no tabs with content scripts running to connect to.");
                 }
             });
         });
@@ -2500,100 +2673,36 @@ var getCustomInitialOptions = function (options) {
     return customParams;
 };
 
-// We can probably pull redirectUri from background script at some point
-function handleTokenRequest(redirectUri) {
-    var _this = this;
-    if (window.location.origin === redirectUri) {
-        var port = browser$1.runtime.connect(undefined, { name: CHILD_PORT_NAME });
-        var handler = function (message, port) { return __awaiter(_this, void 0, void 0, function () {
-            var authorizeUrl, domainUrl, codeResult;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (!(port.name === CHILD_PORT_NAME)) return [3 /*break*/, 2];
-                        authorizeUrl = message.authorizeUrl, domainUrl = message.domainUrl;
-                        return [4 /*yield*/, runIFrame(authorizeUrl, domainUrl, 60)];
-                    case 1:
-                        codeResult = _a.sent();
-                        port.postMessage(codeResult);
-                        _a.label = 2;
-                    case 2: return [2 /*return*/];
-                }
-            });
-        }); };
-        port.onMessage.addListener(handler);
+var User = /** @class */ (function () {
+    function User() {
     }
-    else {
-        browser$1.runtime.onConnect.addListener(function (port) {
-            if (port.name === PARENT_PORT_NAME) {
-                var handler_1 = function () {
-                    var iframe = document.createElement("iframe");
-                    iframe.setAttribute("width", "0");
-                    iframe.setAttribute("height", "0");
-                    iframe.style.display = "none";
-                    document.body.appendChild(iframe);
-                    iframe.setAttribute("src", redirectUri);
-                    port.onMessage.removeListener(handler_1);
-                    port.onDisconnect.addListener(function () {
-                        window.document.body.removeChild(iframe);
-                    });
-                };
-                port.onMessage.addListener(handler_1);
+    return User;
+}());
+
+/**
+ * Asynchronously creates the Auth0Client instance and calls `checkSession`.
+ *
+ * **Note:** There are caveats to using this in a private browser tab, which may not silently authenticae
+ * a user on page refresh. Please see [the checkSession docs](https://auth0.github.io/auth0-spa-js/classes/auth
+ *
+ * @param options The client options
+ * @returns An instance of Auth0Client
+ */
+function createAuth0Client(options) {
+    return __awaiter(this, void 0, void 0, function () {
+        var auth0;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    auth0 = new Auth0Client(options);
+                    return [4 /*yield*/, auth0.checkSession()];
+                case 1:
+                    _a.sent();
+                    return [2 /*return*/, auth0];
             }
         });
-    }
-}
-var runIFrame = function (authorizeUrl, eventOrigin, timeoutInSeconds) {
-    if (timeoutInSeconds === void 0) { timeoutInSeconds = 60; }
-    return __awaiter(void 0, void 0, void 0, function () {
-        return __generator(this, function (_a) {
-            return [2 /*return*/, new Promise(function (res, rej) {
-                    var iframe = window.document.createElement("iframe");
-                    iframe.setAttribute("width", "0");
-                    iframe.setAttribute("height", "0");
-                    iframe.style.display = "none";
-                    var removeIframe = function () {
-                        if (window.document.body.contains(iframe)) {
-                            window.document.body.removeChild(iframe);
-                            window.removeEventListener("message", iframeEventHandler, false);
-                        }
-                    };
-                    var iframeEventHandler;
-                    var timeoutSetTimeoutId = setTimeout(function () {
-                        rej(new TimeoutError());
-                        removeIframe();
-                    }, timeoutInSeconds * 1000);
-                    iframeEventHandler = function (e) {
-                        if (e.origin != eventOrigin)
-                            return;
-                        if (!e.data || e.data.type !== "authorization_response")
-                            return;
-                        var eventSource = e.source;
-                        if (eventSource) {
-                            eventSource.close();
-                        }
-                        e.data.response.error
-                            ? rej(GenericError.fromPayload(e.data.response))
-                            : res(e.data.response);
-                        clearTimeout(timeoutSetTimeoutId);
-                        window.removeEventListener("message", iframeEventHandler, false);
-                        // Delay the removal of the iframe to prevent hanging loading state
-                        // in Chrome: https://github.com/auth0/auth0-spa-js/issues/240
-                        setTimeout(removeIframe, 2 * 1000);
-                    };
-                    window.addEventListener("message", iframeEventHandler, false);
-                    window.document.body.appendChild(iframe);
-                    iframe.setAttribute("src", authorizeUrl);
-                })];
-        });
     });
-};
-
-/* async */ function createAuth0Client(options) {
-    var auth0 = new Auth0Client(options);
-    // TODO: run auth0.checkSession();
-    return auth0;
 }
 
-export { Auth0Client, createAuth0Client as default, handleTokenRequest };
+export { Auth0Client, AuthenticationError, GenericError, MfaRequiredError, TimeoutError, User, createAuth0Client as default, handleTokenRequest };
 //# sourceMappingURL=auth0-web-extension.production.esm.js.map
