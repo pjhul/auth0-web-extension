@@ -55,7 +55,6 @@ export default class Auth0Client {
      *
      */
     isAuthenticated(): Promise<boolean>;
-    checkSession(options?: GetTokenSilentlyOptions): Promise<void>;
     getTokenSilently(options: GetTokenSilentlyOptions & {
         detailedResponse: true;
     }): Promise<GetTokenSilentlyVerboseResult>;
@@ -63,7 +62,6 @@ export default class Auth0Client {
     private _getTokenSilently;
     private _getTokenUsingRefreshToken;
     private _getTokenFromIfFrame;
-    private _performContentScriptHandshake;
     private _verifyIdToken;
     private _getEntryFromCache;
 }

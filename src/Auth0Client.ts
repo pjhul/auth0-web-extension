@@ -26,7 +26,6 @@ import {
   CACHE_LOCATION_MEMORY,
   CHILD_PORT_NAME,
   PARENT_PORT_NAME,
-  RECOVERABLE_ERRORS,
 } from "./constants"
 
 import {
@@ -44,7 +43,6 @@ import {
   IdToken,
   GetIdTokenClaimsOptions,
 } from "./global"
-import {GenericError} from "src"
 
 /**
  * Auth0 SDK for Background Scripts in a Web Extension
@@ -242,18 +240,6 @@ export default class Auth0Client {
     return Boolean(user);
   }
 
-  public async checkSession(options?: GetTokenSilentlyOptions) {
-    // Ignore cookies for now
-
-    try {
-      await this.getTokenSilently(options);
-    } catch(error) {
-      if(!RECOVERABLE_ERRORS.includes((error as any).error)) {
-        throw error;
-      }
-    }
-  }
-
   public async getTokenSilently(
     options: GetTokenSilentlyOptions & { detailedResponse: true }
   ): Promise<GetTokenSilentlyVerboseResult>
@@ -361,11 +347,44 @@ export default class Auth0Client {
       response_mode: "web_message",
     });
 
+    const timeout =
+      options.timeoutInSeconds || this.options.authorizeTimeoutInSeconds;
+
     try {
-      const codeResult = await this._performContentScriptHandshake(
-        url,
-        options.timeoutInSeconds || this.options.authorizeTimeoutInSeconds,
-      );
+      const queryOptions = { active: true, currentWindow: true };
+      let [currentTab] = await browser.tabs.query(queryOptions);
+
+      const codeResult: AuthenticationResult = await new Promise((resolve, reject) => {
+        if(!currentTab?.id) {
+          throw "Could not access current tab. Do you have the 'activeTab' permission in your manifest?";
+        }
+
+        const parentPort = browser.tabs.connect(currentTab.id, { name: PARENT_PORT_NAME });
+
+        const handler = (childPort: browser.Runtime.Port) => {
+          if(childPort.name === CHILD_PORT_NAME) {
+            childPort.onMessage.addListener(message => {
+              resolve(message);
+
+              childPort.disconnect();
+              parentPort.disconnect();
+
+              browser.runtime.onConnect.removeListener(handler);
+            });
+
+            childPort.postMessage({
+              authorizeUrl: url,
+              domainUrl: this.domainUrl,
+            });
+          }
+        }
+
+        browser.runtime.onConnect.addListener(handler)
+
+        parentPort.postMessage({
+          redirectUri: params.redirect_uri,
+        });
+      });
 
       if(stateIn !== codeResult.state) {
         throw new Error("Invalid state");
@@ -415,61 +434,6 @@ export default class Auth0Client {
 
       throw e;
     }
-  }
-
-  private async _performContentScriptHandshake(
-    authorizeUrl: string,
-    timeoutInSeconds?: number,
-  ): Promise<AuthenticationResult> {
-    const queryOptions = { currentWindow: true };
-    let tabs = await browser.tabs.query(queryOptions);
-
-    for await (let tab of tabs) {
-      if(tab.id) {
-        const { id } = tab;
-
-        try {
-          const resp = await browser.tabs.sendMessage(id, "auth_start");
-
-          if(browser.runtime.lastError) {
-            continue;
-          } else if(resp === "ack") {
-            return new Promise((resolve, reject) => {
-              const parentPort = browser.tabs.connect(id, { name: PARENT_PORT_NAME });
-
-              const handler = (childPort: browser.Runtime.Port) => {
-                if(childPort.name === CHILD_PORT_NAME) {
-                  childPort.onMessage.addListener(message => {
-                    resolve(message);
-
-                    childPort.disconnect();
-                    parentPort.disconnect();
-
-                    browser.runtime.onConnect.removeListener(handler);
-                  });
-
-                  childPort.postMessage({
-                    authorizeUrl,
-                    domainUrl: this.domainUrl,
-                  });
-                }
-              }
-
-              browser.runtime.onConnect.addListener(handler)
-              parentPort.postMessage({});
-
-              if(browser.runtime.lastError) {
-                reject(browser.runtime.lastError);
-              }
-            });
-          }
-        } catch(error) {
-          continue;
-        }
-      }
-    }
-
-    throw new GenericError("no_scripts", "There are no tabs with content scripts running to connect to.");
   }
 
   private async _verifyIdToken(
