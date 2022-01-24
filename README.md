@@ -16,7 +16,7 @@ yarn add auth0-web-extension@https://github.com/pjhul/auth0-web-extension
 
 ## Create the token handler
 
-Add the following code to your service worker:
+Add the following code to your content script:
 
 ```js
 import { handleTokenRequest } from "auth0-web-extension"
@@ -24,7 +24,7 @@ import { handleTokenRequest } from "auth0-web-extension"
 handleTokenRequest(<YOUR_REDIRECT_URI>);
 ```
 
-## Permissions
+## Manifest
 
 In your manifest, you will need to add a couple items.
 
@@ -69,7 +69,7 @@ const token = await auth0.getTokenSilently(options);
 ## Caveats
 
 1. You will **only** be able to retrieve access tokens in your background script if there is at least one instance of your service worker running.
-2. We don't yet support refresh tokens, but again this should be coming soon.
+2. We don't yet support refresh tokens, but this should be coming soon.
 3. This package is not on npm yet, but after some of these other caveats are fixed I'll make it available.
 
 ## Support + Feedback
