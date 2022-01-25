@@ -8,6 +8,7 @@ import {
   createQueryParams,
   encode,
   sha256,
+  validateCrypto,
 } from "./utils"
 
 import { oauthToken } from "./api"
@@ -66,10 +67,11 @@ export default class Auth0Client {
   private scope: string | undefined
   private nowProvider: () => number | Promise<number>
 
-  cacheLocation: CacheLocation | null
+  cacheLocation: CacheLocation
 
   constructor(private options: Auth0ClientOptions) {
-    // TODO: validate crypto library
+    validateCrypto();
+
     // TODO: find a way to validate we are running in a background script
 
     if(options.cache && options.cacheLocation) {
@@ -78,10 +80,12 @@ export default class Auth0Client {
       );
     }
 
-    let cache: ICache
+    let cache: ICache;
+
     if(options.cache) {
       cache = options.cache;
-      this.cacheLocation = null;
+
+      this.cacheLocation = CACHE_LOCATION_MEMORY;
     } else {
       this.cacheLocation = options.cacheLocation || CACHE_LOCATION_MEMORY;
 
@@ -104,7 +108,7 @@ export default class Auth0Client {
         ? new CacheKeyManifest(cache, this.options.client_id)
         : null,
       this.nowProvider,
-    )
+    );
 
     this.domainUrl = getDomain(this.options.domain);
     this.tokenIssuer = getTokenIssuer(this.options.issuer, this.domainUrl);
@@ -230,6 +234,11 @@ export default class Auth0Client {
     const audience = options.audience || this.options.audience || "default";
     const scope = getUniqueScopes(this.defaultScope, this.scope, options.scope);
 
+    await this.checkSession({
+      audience,
+      scope,
+    });
+
     const cache = await this.cacheManager.get(
       new CacheKey({
         client_id: this.options.client_id,
@@ -274,8 +283,6 @@ export default class Auth0Client {
   public async getTokenSilently(
     options?: GetTokenSilentlyOptions,
   ): Promise<string>
-
-  // TODO: Return verbose response if detailedResponse = true
 
   /**
    * Fetches a new access token
