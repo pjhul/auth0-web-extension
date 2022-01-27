@@ -7,7 +7,8 @@
   "types": "dist/types/index.d.ts",
   "module": "dist/auth0-web-extension.production.esm.js",
   "scripts": {
-    "build": "rimraf dist && rollup -m -c --environment NODE_ENV:production"
+    "build": "rimraf dist && rollup -m -c --environment NODE_ENV:production",
+    "dev": "rollup -mcw"
   },
   "repository": {
     "type": "git",

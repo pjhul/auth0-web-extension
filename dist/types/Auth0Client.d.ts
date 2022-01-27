@@ -11,7 +11,7 @@ export default class Auth0Client {
     private defaultScope;
     private scope;
     private nowProvider;
-    cacheLocation: CacheLocation | null;
+    cacheLocation: CacheLocation;
     constructor(options: Auth0ClientOptions);
     private _url;
     private _getParams;
@@ -63,6 +63,7 @@ export default class Auth0Client {
     private _getTokenSilently;
     private _getTokenUsingRefreshToken;
     private _getTokenFromIfFrame;
+    private _getTabId;
     private _verifyIdToken;
     private _getEntryFromCache;
 }

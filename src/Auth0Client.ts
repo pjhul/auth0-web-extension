@@ -48,8 +48,9 @@ import {
   GetIdTokenClaimsOptions,
 } from "./global"
 
-import { singlePromise, retryPromise } from "./promise-utils"
-import {TimeoutError} from "./errors"
+import { TimeoutError } from "./errors"
+
+import { singlePromise, retryPromise, delay } from "./promise-utils"
 
 const lock = new Lock();
 
@@ -413,20 +414,17 @@ export default class Auth0Client {
       options.timeoutInSeconds || this.options.authorizeTimeoutInSeconds;
 
     try {
-      const queryOptions = { active: true, currentWindow: true };
-      let [currentTab] = await browser.tabs.query(queryOptions);
+      const tabId = await retryPromise(
+        this._getTabId,
+        10
+      );
 
-      const { id } = currentTab || {};
-
-      if(!id) {
-        throw "Could not access current tab.";
+      if(!tabId) {
+        throw "Failed to connect to tab too many times"
       }
 
-      // This will throw if there is not a content script running
-      await browser.tabs.sendMessage(id, "");
-
       const codeResult: AuthenticationResult = await new Promise((resolve) => {
-        const parentPort = browser.tabs.connect(id, { name: PARENT_PORT_NAME });
+        const parentPort = browser.tabs.connect(tabId, { name: PARENT_PORT_NAME });
 
         const handler = (childPort: browser.Runtime.Port) => {
           if(childPort.name === CHILD_PORT_NAME) {
@@ -501,6 +499,24 @@ export default class Auth0Client {
 
       throw e;
     }
+  }
+
+  private async _getTabId(): Promise<number | null> {
+    const queryOptions = { active: true, currentWindow: true };
+    let [currentTab] = await browser.tabs.query(queryOptions);
+
+    const { id } = currentTab || {};
+
+    if(id) {
+      // This will throw if there is not a content script running
+      const resp = await browser.tabs.sendMessage(id, "");
+
+      if(resp === "ack") {
+        return id;
+      }
+    }
+
+    throw "Could not access current tab.";
   }
 
   private async _verifyIdToken(

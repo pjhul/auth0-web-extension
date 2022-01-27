@@ -16,6 +16,12 @@ import {
 
 // We can probably pull redirectUri from background script at some point
 export function handleTokenRequest(redirectUri: string) {
+  browser.runtime.onMessage.addListener(() => {
+    return Promise.resolve("ack");
+  });
+
+  console.log(window.location.origin)
+
   if(window.location.origin === redirectUri) {
     const port = browser.runtime.connect(undefined, { name: CHILD_PORT_NAME })
 
@@ -86,6 +92,8 @@ const runIFrame = async (
     }, timeoutInSeconds * 1000);
 
     iframeEventHandler = function (e: MessageEvent) {
+      console.log(e)
+
       if(e.origin != eventOrigin) return;
       if(!e.data || e.data.type !== "authorization_response") return
 

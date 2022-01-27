@@ -1,5 +1,9 @@
 const singlePromiseMap: Record<string, Promise<any>> = {};
 
+export const delay = (ms: number) => new Promise<void>(resolve => {
+  setTimeout(resolve, ms);
+});
+
 export const singlePromise = <T>(cb: () => Promise<T>, key: string) => {
   let promise = singlePromiseMap[key];
   if (!promise) {
@@ -12,15 +16,19 @@ export const singlePromise = <T>(cb: () => Promise<T>, key: string) => {
   return promise;
 };
 
-export const retryPromise = async (
-  cb: () => Promise<boolean>,
+export const retryPromise = async <T>(
+  cb: () => Promise<T>,
   maxNumberOfRetries = 3
-) => {
+): Promise<T | null> => {
   for (let i = 0; i < maxNumberOfRetries; i++) {
-    if (await cb()) {
-      return true;
+    try {
+      const result = await cb();
+      return result;
+    } catch(error) {
+      console.log(error)
+      continue;
     }
   }
 
-  return false;
+  return null;
 };
