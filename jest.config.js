@@ -13,6 +13,7 @@ module.exports = {
   ],
   testEnvironment: 'jsdom',
   testMatch: ['**/__tests__/**/*.test.ts'],
+  coverageReporters: ['lcov', 'text', 'text-summary'],
   globals: {
     'ts-jest': {
       tsconfig: './tsconfig.test.json',
