@@ -1,8 +1,4 @@
-import {
-  CacheKey,
-  ICache,
-  InMemoryCache,
-} from '../../src/cache';
+import { CacheKey, ICache, InMemoryCache } from '../../src/cache';
 import { CacheEntry } from '../../src/cache/shared';
 
 import {
@@ -12,7 +8,7 @@ import {
   TEST_ACCESS_TOKEN,
   dayInSeconds,
   nowSeconds,
-  TEST_AUDIENCE
+  TEST_AUDIENCE,
 } from '../constants';
 import { InMemoryAsyncCacheNoKeys } from './shared';
 
@@ -20,8 +16,8 @@ const cacheFactories = [
   { new: () => new InMemoryCache().enclosedCache, name: 'In-memory Cache' },
   {
     new: () => new InMemoryAsyncCacheNoKeys(),
-    name: 'In-memory async cache with no allKeys'
-  }
+    name: 'In-memory async cache with no allKeys',
+  },
 ];
 
 const defaultEntry: CacheEntry = {
@@ -35,10 +31,10 @@ const defaultEntry: CacheEntry = {
     claims: {
       __raw: TEST_ID_TOKEN,
       exp: nowSeconds() + dayInSeconds + 100,
-      name: 'Test'
+      name: 'Test',
     },
-    user: { name: 'Test' }
-  }
+    user: { name: 'Test' },
+  },
 };
 
 cacheFactories.forEach(cacheFactory => {
@@ -60,10 +56,10 @@ cacheFactories.forEach(cacheFactory => {
           claims: {
             __raw: TEST_ID_TOKEN,
             exp: nowSeconds() + dayInSeconds,
-            name: 'Test'
+            name: 'Test',
           },
-          user: { name: 'Test' }
-        }
+          user: { name: 'Test' },
+        },
       };
 
       const cacheKey = CacheKey.fromCacheEntry(data);
@@ -80,16 +76,16 @@ cacheFactories.forEach(cacheFactory => {
           claims: {
             __raw: TEST_ID_TOKEN,
             exp: nowSeconds() + dayInSeconds,
-            name: 'Test'
+            name: 'Test',
           },
-          user: { name: 'Test' }
-        }
+          user: { name: 'Test' },
+        },
       };
 
       const cacheKey = new CacheKey({
         client_id: TEST_CLIENT_ID,
         audience: TEST_AUDIENCE,
-        scope: 'the_scope'
+        scope: 'the_scope',
       });
 
       await cache.set(cacheKey.toKey(), data);
@@ -104,16 +100,16 @@ cacheFactories.forEach(cacheFactory => {
           claims: {
             __raw: TEST_ID_TOKEN,
             exp: nowSeconds() + dayInSeconds,
-            name: 'Test'
+            name: 'Test',
           },
-          user: { name: 'Test' }
-        }
+          user: { name: 'Test' },
+        },
       };
 
       const cacheKey = new CacheKey({
         client_id: TEST_CLIENT_ID,
         audience: TEST_AUDIENCE,
-        scope: 'the_scope3 the_scope'
+        scope: 'the_scope3 the_scope',
       });
 
       await cache.set(cacheKey.toKey(), data);
@@ -132,10 +128,10 @@ cacheFactories.forEach(cacheFactory => {
           claims: {
             __raw: TEST_ID_TOKEN,
             exp: nowSeconds() + dayInSeconds,
-            name: 'Test'
+            name: 'Test',
           },
-          user: { name: 'Test' }
-        }
+          user: { name: 'Test' },
+        },
       };
 
       const cacheKey = CacheKey.fromCacheEntry(data);
@@ -149,7 +145,7 @@ cacheFactories.forEach(cacheFactory => {
           new CacheKey({
             client_id: TEST_CLIENT_ID,
             audience: TEST_AUDIENCE,
-            scope: 'the_scope4 the_scope'
+            scope: 'the_scope4 the_scope',
           }).toKey()
         )
       ).toBeFalsy();

@@ -1,17 +1,17 @@
-import { IdToken, User, } from "../global"
+import { IdToken, User } from '../global';
 
 export const CACHE_KEY_PREFIX = '@@auth0webext@@';
 
 export type CacheKeyData = {
-  audience: string
-  scope: string
-  client_id: string
-}
+  audience: string;
+  scope: string;
+  client_id: string;
+};
 
 export class CacheKey {
-  public client_id: string
-  public scope: string
-  public audience: string
+  public client_id: string;
+  public scope: string;
+  public audience: string;
 
   constructor(data: CacheKeyData, public prefix: string = CACHE_KEY_PREFIX) {
     this.client_id = data.client_id;
@@ -35,7 +35,7 @@ export class CacheKey {
   static fromKey(key: string): CacheKey | null {
     const [prefix, client_id, audience, scope] = key.split('::');
 
-    if(!prefix || !client_id || !scope || !audience) return null
+    if (!prefix || !client_id || !scope || !audience) return null;
 
     return new CacheKey({ client_id, scope, audience }, prefix);
   }
@@ -51,44 +51,44 @@ export class CacheKey {
     return new CacheKey({
       scope,
       audience,
-      client_id
+      client_id,
     });
   }
 }
 
 interface DecodedToken {
-  claims: IdToken
-  user: User
+  claims: IdToken;
+  user: User;
 }
 
 export type CacheEntry = {
-  id_token: string
-  access_token: string
-  expires_in: number
-  decodedToken: DecodedToken
-  audience: string
-  scope: string
-  client_id: string
-  refresh_token?: string
-  oauthTokenScope?: string
-}
+  id_token: string;
+  access_token: string;
+  expires_in: number;
+  decodedToken: DecodedToken;
+  audience: string;
+  scope: string;
+  client_id: string;
+  refresh_token?: string;
+  oauthTokenScope?: string;
+};
 
 export type WrappedCacheEntry = {
-  body: Partial<CacheEntry>
-  expiresAt: number
-}
+  body: Partial<CacheEntry>;
+  expiresAt: number;
+};
 
 export type KeyManifestEntry = {
-  keys: string[]
-}
+  keys: string[];
+};
 
-export type Cacheable = WrappedCacheEntry | KeyManifestEntry
+export type Cacheable = WrappedCacheEntry | KeyManifestEntry;
 
-export type MaybePromise<T> = Promise<T> | T
+export type MaybePromise<T> = Promise<T> | T;
 
 export interface ICache {
-  set<T = Cacheable>(key: string, entry: T): MaybePromise<void>
-  get<T = Cacheable>(key: string): MaybePromise<T | null>
-  remove(key: string): MaybePromise<void>
-  allKeys?(): MaybePromise<string[]>
+  set<T = Cacheable>(key: string, entry: T): MaybePromise<void>;
+  get<T = Cacheable>(key: string): MaybePromise<T | null>;
+  remove(key: string): MaybePromise<void>;
+  allKeys?(): MaybePromise<string[]>;
 }

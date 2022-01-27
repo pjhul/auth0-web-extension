@@ -279,7 +279,11 @@
 <a name='L214'></a><a href='#L214'>214</a>
 <a name='L215'></a><a href='#L215'>215</a>
 <a name='L216'></a><a href='#L216'>216</a>
-<a name='L217'></a><a href='#L217'>217</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
+<a name='L217'></a><a href='#L217'>217</a>
+<a name='L218'></a><a href='#L218'>218</a>
+<a name='L219'></a><a href='#L219'>219</a>
+<a name='L220'></a><a href='#L220'>220</a>
+<a name='L221'></a><a href='#L221'>221</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -325,6 +329,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -411,7 +418,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -448,6 +454,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -460,7 +469,6 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -495,31 +503,31 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import browser from "webextension-polyfill"
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import browser from 'webextension-polyfill';
 &nbsp;
-import getProcessLock from "./processLock"
+import getProcessLock from './processLock';
 &nbsp;
-import { createRandomString } from "../utils"
+import { createRandomString } from '../utils';
 &nbsp;
-const LOCK_STORAGE_PREFIX = "auth0-web-extension-lock-key";
+const LOCK_STORAGE_PREFIX = 'auth0-web-extension-lock-key';
 &nbsp;
 const delay = <span class="fstat-no" title="function not covered" >(m</span>s: number): Promise&lt;void&gt; =&gt; {
 <span class="cstat-no" title="statement not covered" >  return new Promise(<span class="fstat-no" title="function not covered" >resolve </span>=&gt; <span class="cstat-no" title="statement not covered" >setTimeout(resolve, ms))</span>;</span>
-}
+};
 &nbsp;
 const getLockId = (): string =&gt; {
   return Date.now().toString() + createRandomString(15);
-}
+};
 &nbsp;
 export default class Lock {
   private waiters: Array&lt;any&gt; | undefined = undefined;
-  private id: string
-  private acquiredIatSet: Set&lt;string&gt; = new Set&lt;string&gt;()
+  private id: string;
+  private acquiredIatSet: Set&lt;string&gt; = new Set&lt;string&gt;();
 &nbsp;
   constructor() {
     this.id = getLockId();
-    if(this.waiters === undefined) {
-      this.waiters = []
+    if (this.waiters === undefined) {
+      this.waiters = [];
     }
   }
 &nbsp;
@@ -528,29 +536,32 @@ export default class Lock {
     const maxTime = <span class="cstat-no" title="statement not covered" >Date.now() + timeout;</span>
     const storageKey = <span class="cstat-no" title="statement not covered" >`${LOCK_STORAGE_PREFIX}::${key}`;</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    while(Date.now() &lt; maxTime) {</span>
+<span class="cstat-no" title="statement not covered" >    while (Date.now() &lt; maxTime) {</span>
 <span class="cstat-no" title="statement not covered" >      await delay(30);</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >      if(await this.hasKey(storageKey)) {</span>
-<span class="cstat-no" title="statement not covered" >        await this.lockCorrector()</span>
-<span class="cstat-no" title="statement not covered" >        await this.waitForSomethingToChange(maxTime)</span>
+<span class="cstat-no" title="statement not covered" >      if (await this.hasKey(storageKey)) {</span>
+<span class="cstat-no" title="statement not covered" >        await this.lockCorrector();</span>
+<span class="cstat-no" title="statement not covered" >        await this.waitForSomethingToChange(maxTime);</span>
       } else {
-<span class="cstat-no" title="statement not covered" >        await this.setItem(storageKey, JSON.stringify({</span>
-          id: this.id,
-          iat,
-          timeUpdated: Date.now(),
-        }));
+<span class="cstat-no" title="statement not covered" >        await this.setItem(</span>
+          storageKey,
+          JSON.stringify({
+            id: this.id,
+            iat,
+            timeUpdated: Date.now(),
+          })
+        );
 &nbsp;
 <span class="cstat-no" title="statement not covered" >        await delay(30);</span>
 &nbsp;
         let itemPostDelay = <span class="cstat-no" title="statement not covered" >await this.getItem(storageKey);</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if(itemPostDelay !== null) {</span>
+<span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if (itemPostDelay !== null) {</span>
           const item = <span class="cstat-no" title="statement not covered" >JSON.parse(itemPostDelay);</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >          <span class="missing-if-branch" title="if path not taken" >I</span>if(item.id === this.id &amp;&amp; item.iat === iat) {</span>
+<span class="cstat-no" title="statement not covered" >          <span class="missing-if-branch" title="if path not taken" >I</span>if (item.id === this.id &amp;&amp; item.iat === iat) {</span>
 <span class="cstat-no" title="statement not covered" >            this.acquiredIatSet.add(iat);</span>
-<span class="cstat-no" title="statement not covered" >            this.refreshLock(key, iat)</span>
+<span class="cstat-no" title="statement not covered" >            this.refreshLock(key, iat);</span>
 <span class="cstat-no" title="statement not covered" >            return true;</span>
           }
         }
@@ -569,17 +580,17 @@ export default class Lock {
 <span class="cstat-no" title="statement not covered" >      return;</span>
     }
 &nbsp;
-    const parsed = <span class="cstat-no" title="statement not covered" >JSON.parse(lockObj)</span>
+    const parsed = <span class="cstat-no" title="statement not covered" >JSON.parse(lockObj);</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if(parsed.id === this.id) {</span>
-<span class="cstat-no" title="statement not covered" >      await getProcessLock().lock(parsed.iat)</span>
+<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (parsed.id === this.id) {</span>
+<span class="cstat-no" title="statement not covered" >      await getProcessLock().lock(parsed.iat);</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >      this.acquiredIatSet.delete(parsed.iat)</span>
-<span class="cstat-no" title="statement not covered" >      await this.removeItem(storageKey)</span>
+<span class="cstat-no" title="statement not covered" >      this.acquiredIatSet.delete(parsed.iat);</span>
+<span class="cstat-no" title="statement not covered" >      await this.removeItem(storageKey);</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >      getProcessLock().unlock(parsed.iat)</span>
+<span class="cstat-no" title="statement not covered" >      getProcessLock().unlock(parsed.iat);</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >      this.notifyWaiters()</span>
+<span class="cstat-no" title="statement not covered" >      this.notifyWaiters();</span>
     }
   }
 &nbsp;
@@ -587,109 +598,110 @@ export default class Lock {
 <span class="cstat-no" title="statement not covered" >    setTimeout(<span class="fstat-no" title="function not covered" >async () =</span>&gt;<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" > {</span></span></span>
 <span class="cstat-no" title="statement not covered" >      await getProcessLock().lock(iat);</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if(!this.acquiredIatSet.has(iat)) {</span>
-<span class="cstat-no" title="statement not covered" >        getProcessLock().unlock(iat)</span>
-<span class="cstat-no" title="statement not covered" >        return</span>
+<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (!this.acquiredIatSet.has(iat)) {</span>
+<span class="cstat-no" title="statement not covered" >        getProcessLock().unlock(iat);</span>
+<span class="cstat-no" title="statement not covered" >        return;</span>
       }
 &nbsp;
-      const item = <span class="cstat-no" title="statement not covered" >await this.getItem(key)</span>
+      const item = <span class="cstat-no" title="statement not covered" >await this.getItem(key);</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >      if(item !== null) {</span>
-        const parsed = <span class="cstat-no" title="statement not covered" >JSON.parse(item)</span>
-<span class="cstat-no" title="statement not covered" >        parsed.timeUpdated = Date.now()</span>
-<span class="cstat-no" title="statement not covered" >        await this.setItem(key, JSON.stringify(parsed))</span>
-<span class="cstat-no" title="statement not covered" >        getProcessLock().unlock(iat)</span>
+<span class="cstat-no" title="statement not covered" >      if (item !== null) {</span>
+        const parsed = <span class="cstat-no" title="statement not covered" >JSON.parse(item);</span>
+<span class="cstat-no" title="statement not covered" >        parsed.timeUpdated = Date.now();</span>
+<span class="cstat-no" title="statement not covered" >        await this.setItem(key, JSON.stringify(parsed));</span>
+<span class="cstat-no" title="statement not covered" >        getProcessLock().unlock(iat);</span>
       } else {
-<span class="cstat-no" title="statement not covered" >        getProcessLock().unlock(iat)</span>
-<span class="cstat-no" title="statement not covered" >        return</span>
+<span class="cstat-no" title="statement not covered" >        getProcessLock().unlock(iat);</span>
+<span class="cstat-no" title="statement not covered" >        return;</span>
       }
-<span class="cstat-no" title="statement not covered" >      this.refreshLock(key, iat)</span>
-    }, 1000)
+<span class="cstat-no" title="statement not covered" >      this.refreshLock(key, iat);</span>
+    }, 1000);
   }
 &nbsp;
   private async <span class="fstat-no" title="function not covered" >lockCorrector(</span>) {
     const minTime = <span class="cstat-no" title="statement not covered" >Date.now() - 5000;</span>
-    const keys = <span class="cstat-no" title="statement not covered" >await this.allKeys()</span>
+    const keys = <span class="cstat-no" title="statement not covered" >await this.allKeys();</span>
 &nbsp;
-    let notifyWaiters = <span class="cstat-no" title="statement not covered" >false</span>
+    let notifyWaiters = <span class="cstat-no" title="statement not covered" >false;</span>
 <span class="cstat-no" title="statement not covered" >    for await (let key<span class="cstat-no" title="statement not covered" > of <span class="cstat-no" title="statement not covered" >k</span>eys) {</span></span>
-<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if(key.includes(LOCK_STORAGE_PREFIX)) {</span>
+<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (key.includes(LOCK_STORAGE_PREFIX)) {</span>
         let lockObj = <span class="cstat-no" title="statement not covered" >await this.getItem(key);</span>
-<span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if(lockObj !== null) {</span>
-          const parsed = <span class="cstat-no" title="statement not covered" >JSON.parse(lockObj)</span>
-<span class="cstat-no" title="statement not covered" >          <span class="missing-if-branch" title="if path not taken" >I</span>if(parsed.timeUpdated &lt; minTime) {</span>
-<span class="cstat-no" title="statement not covered" >            this.removeItem(key)</span>
-<span class="cstat-no" title="statement not covered" >            notifyWaiters = true</span>
+<span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if (lockObj !== null) {</span>
+          const parsed = <span class="cstat-no" title="statement not covered" >JSON.parse(lockObj);</span>
+<span class="cstat-no" title="statement not covered" >          <span class="missing-if-branch" title="if path not taken" >I</span>if (parsed.timeUpdated &lt; minTime) {</span>
+<span class="cstat-no" title="statement not covered" >            this.removeItem(key);</span>
+<span class="cstat-no" title="statement not covered" >            notifyWaiters = true;</span>
           }
         }
       }
     }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if(notifyWaiters) {</span>
-<span class="cstat-no" title="statement not covered" >      this.notifyWaiters()</span>
+<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (notifyWaiters) {</span>
+<span class="cstat-no" title="statement not covered" >      this.notifyWaiters();</span>
     }
   }
-&nbsp;
 &nbsp;
   private async <span class="fstat-no" title="function not covered" >waitForSomethingToChange(</span>maxTime: number) {
 <span class="cstat-no" title="statement not covered" >    await new Promise&lt;void&gt;(<span class="fstat-no" title="function not covered" >resolve </span>=&gt; {</span>
-      let resolveCalled = <span class="cstat-no" title="statement not covered" >false</span>
-      let startedAt = <span class="cstat-no" title="statement not covered" >Date.now()</span>
-      const minTime = <span class="cstat-no" title="statement not covered" >50</span>
-      let removedListeners = <span class="cstat-no" title="statement not covered" >false</span>
+      let resolveCalled = <span class="cstat-no" title="statement not covered" >false;</span>
+      let startedAt = <span class="cstat-no" title="statement not covered" >Date.now();</span>
+      const minTime = <span class="cstat-no" title="statement not covered" >50;</span>
+      let removedListeners = <span class="cstat-no" title="statement not covered" >false;</span>
 &nbsp;
       const stopWaiting = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >() =</span>&gt; {</span>
-<span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if(!removedListeners) {</span>
-<span class="cstat-no" title="statement not covered" >          browser.storage.onChanged.removeListener(stopWaiting)</span>
-<span class="cstat-no" title="statement not covered" >          this.removeFromWaiting(stopWaiting)</span>
-<span class="cstat-no" title="statement not covered" >          clearTimeout(timeoutId)</span>
-<span class="cstat-no" title="statement not covered" >          removedListeners = true</span>
+<span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if (!removedListeners) {</span>
+<span class="cstat-no" title="statement not covered" >          browser.storage.onChanged.removeListener(stopWaiting);</span>
+<span class="cstat-no" title="statement not covered" >          this.removeFromWaiting(stopWaiting);</span>
+<span class="cstat-no" title="statement not covered" >          clearTimeout(timeoutId);</span>
+<span class="cstat-no" title="statement not covered" >          removedListeners = true;</span>
         }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if(!resolveCalled) {</span>
-<span class="cstat-no" title="statement not covered" >          resolveCalled = true</span>
-          let timeToWait = <span class="cstat-no" title="statement not covered" >minTime - (Date.now() - startedAt)</span>
-<span class="cstat-no" title="statement not covered" >          if(timeToWait &gt; 0) {</span>
-<span class="cstat-no" title="statement not covered" >            setTimeout(resolve, timeToWait)</span>
+<span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if (!resolveCalled) {</span>
+<span class="cstat-no" title="statement not covered" >          resolveCalled = true;</span>
+          let timeToWait = <span class="cstat-no" title="statement not covered" >minTime - (Date.now() - startedAt);</span>
+<span class="cstat-no" title="statement not covered" >          if (timeToWait &gt; 0) {</span>
+<span class="cstat-no" title="statement not covered" >            setTimeout(resolve, timeToWait);</span>
           } else {
-<span class="cstat-no" title="statement not covered" >            resolve()</span>
+<span class="cstat-no" title="statement not covered" >            resolve();</span>
           }
         }
-      }
+      };
 &nbsp;
-<span class="cstat-no" title="statement not covered" >      browser.storage.onChanged.addListener(stopWaiting)</span>
-<span class="cstat-no" title="statement not covered" >      this.addToWaiting(stopWaiting)</span>
-      let timeoutId = <span class="cstat-no" title="statement not covered" >setTimeout(stopWaiting, Math.max(0, maxTime - Date.now()))</span>
-    })
+<span class="cstat-no" title="statement not covered" >      browser.storage.onChanged.addListener(stopWaiting);</span>
+<span class="cstat-no" title="statement not covered" >      this.addToWaiting(stopWaiting);</span>
+      let timeoutId = <span class="cstat-no" title="statement not covered" >setTimeout(</span>
+        stopWaiting,
+        Math.max(0, maxTime - Date.now())
+      );
+    });
   }
 &nbsp;
   private <span class="fstat-no" title="function not covered" >addToWaiting(</span>func: any) {
-<span class="cstat-no" title="statement not covered" >      this.removeFromWaiting(func);</span>
-<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (this.waiters === undefined) {</span>
-<span class="cstat-no" title="statement not covered" >          return;</span>
-      }
-<span class="cstat-no" title="statement not covered" >      this.waiters.push(func);</span>
+<span class="cstat-no" title="statement not covered" >    this.removeFromWaiting(func);</span>
+<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (this.waiters === undefined) {</span>
+<span class="cstat-no" title="statement not covered" >      return;</span>
+    }
+<span class="cstat-no" title="statement not covered" >    this.waiters.push(func);</span>
   }
 &nbsp;
   private <span class="fstat-no" title="function not covered" >removeFromWaiting(</span>func: any) {
-<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (this.waiters === undefined) {</span>
-<span class="cstat-no" title="statement not covered" >          return;</span>
-      }
-<span class="cstat-no" title="statement not covered" >      this.waiters = this.waiters.filter(<span class="fstat-no" title="function not covered" >i </span>=&gt; <span class="cstat-no" title="statement not covered" >i !== func)</span>;</span>
+<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (this.waiters === undefined) {</span>
+<span class="cstat-no" title="statement not covered" >      return;</span>
+    }
+<span class="cstat-no" title="statement not covered" >    this.waiters = this.waiters.filter(<span class="fstat-no" title="function not covered" >i </span>=&gt; <span class="cstat-no" title="statement not covered" >i !== func)</span>;</span>
   }
 &nbsp;
-&nbsp;
   private <span class="fstat-no" title="function not covered" >notifyWaiters(</span>) {
-<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if(this.waiters === undefined) {</span>
-<span class="cstat-no" title="statement not covered" >      return</span>
+<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (this.waiters === undefined) {</span>
+<span class="cstat-no" title="statement not covered" >      return;</span>
     }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    [...this.waiters].forEach(<span class="fstat-no" title="function not covered" >i </span>=&gt; <span class="cstat-no" title="statement not covered" >i())</span></span>
+<span class="cstat-no" title="statement not covered" >    [...this.waiters].forEach(<span class="fstat-no" title="function not covered" >i </span>=&gt; <span class="cstat-no" title="statement not covered" >i())</span>;</span>
   }
 &nbsp;
   private async <span class="fstat-no" title="function not covered" >allKeys(</span>): Promise&lt;string[]&gt; {
-    const items = <span class="cstat-no" title="statement not covered" >await browser.storage.local.get(null)</span>
-<span class="cstat-no" title="statement not covered" >    return Object.keys(items)</span>
+    const items = <span class="cstat-no" title="statement not covered" >await browser.storage.local.get(null);</span>
+<span class="cstat-no" title="statement not covered" >    return Object.keys(items);</span>
   }
 &nbsp;
   private async <span class="fstat-no" title="function not covered" >hasKey(</span>key: string): Promise&lt;boolean&gt; {
@@ -698,7 +710,7 @@ export default class Lock {
   }
 &nbsp;
   private async <span class="fstat-no" title="function not covered" >setItem(</span>key: string, value: string): Promise&lt;void&gt; {
-<span class="cstat-no" title="statement not covered" >    return await browser.storage.local.set({ [key]: value })</span>
+<span class="cstat-no" title="statement not covered" >    return await browser.storage.local.set({ [key]: value });</span>
   }
 &nbsp;
   private async <span class="fstat-no" title="function not covered" >getItem(</span>key: string): Promise&lt;string | null&gt; {
@@ -708,7 +720,7 @@ export default class Lock {
   }
 &nbsp;
   private async <span class="fstat-no" title="function not covered" >removeItem(</span>key: string): Promise&lt;void&gt; {
-<span class="cstat-no" title="statement not covered" >    return await browser.storage.local.remove(key)</span>
+<span class="cstat-no" title="statement not covered" >    return await browser.storage.local.remove(key);</span>
   }
 }
 &nbsp;</pre></td></tr></table></pre>
@@ -718,7 +730,7 @@ export default class Lock {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at Thu Jan 27 2022 17:58:49 GMT-0500 (Eastern Standard Time)
+                at Thu Jan 27 2022 18:10:29 GMT-0500 (Eastern Standard Time)
             </div>
         <script src="../../prettify.js"></script>
         <script>

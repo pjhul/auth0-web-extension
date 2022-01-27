@@ -2,8 +2,8 @@ import {
   CACHE_KEY_PREFIX,
   ICache,
   KeyManifestEntry,
-  MaybePromise
-} from './shared'
+  MaybePromise,
+} from './shared';
 
 export class CacheKeyManifest {
   private readonly manifestKey: string;
@@ -32,7 +32,9 @@ export class CacheKeyManifest {
       keys.delete(key);
 
       if (keys.size > 0) {
-        return await this.cache.set(this.manifestKey, { keys: Array.from(keys.values()) });
+        return await this.cache.set(this.manifestKey, {
+          keys: Array.from(keys.values()),
+        });
       }
 
       return await this.cache.remove(this.manifestKey);

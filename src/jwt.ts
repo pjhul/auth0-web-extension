@@ -33,7 +33,7 @@ const idTokendecoded = [
   'rph',
   'sid',
   'vot',
-  'vtm'
+  'vtm',
 ];
 
 export const decode = (token: string) => {
@@ -56,7 +56,7 @@ export const decode = (token: string) => {
     encoded: { header, payload, signature },
     header: JSON.parse(urlDecodeB64(header)),
     claims,
-    user
+    user,
   };
 };
 

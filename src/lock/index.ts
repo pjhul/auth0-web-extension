@@ -1,28 +1,28 @@
-import browser from "webextension-polyfill"
+import browser from 'webextension-polyfill';
 
-import getProcessLock from "./processLock"
+import getProcessLock from './processLock';
 
-import { createRandomString } from "../utils"
+import { createRandomString } from '../utils';
 
-const LOCK_STORAGE_PREFIX = "auth0-web-extension-lock-key";
+const LOCK_STORAGE_PREFIX = 'auth0-web-extension-lock-key';
 
 const delay = (ms: number): Promise<void> => {
   return new Promise(resolve => setTimeout(resolve, ms));
-}
+};
 
 const getLockId = (): string => {
   return Date.now().toString() + createRandomString(15);
-}
+};
 
 export default class Lock {
   private waiters: Array<any> | undefined = undefined;
-  private id: string
-  private acquiredIatSet: Set<string> = new Set<string>()
+  private id: string;
+  private acquiredIatSet: Set<string> = new Set<string>();
 
   constructor() {
     this.id = getLockId();
-    if(this.waiters === undefined) {
-      this.waiters = []
+    if (this.waiters === undefined) {
+      this.waiters = [];
     }
   }
 
@@ -31,29 +31,32 @@ export default class Lock {
     const maxTime = Date.now() + timeout;
     const storageKey = `${LOCK_STORAGE_PREFIX}::${key}`;
 
-    while(Date.now() < maxTime) {
+    while (Date.now() < maxTime) {
       await delay(30);
 
-      if(await this.hasKey(storageKey)) {
-        await this.lockCorrector()
-        await this.waitForSomethingToChange(maxTime)
+      if (await this.hasKey(storageKey)) {
+        await this.lockCorrector();
+        await this.waitForSomethingToChange(maxTime);
       } else {
-        await this.setItem(storageKey, JSON.stringify({
-          id: this.id,
-          iat,
-          timeUpdated: Date.now(),
-        }));
+        await this.setItem(
+          storageKey,
+          JSON.stringify({
+            id: this.id,
+            iat,
+            timeUpdated: Date.now(),
+          })
+        );
 
         await delay(30);
 
         let itemPostDelay = await this.getItem(storageKey);
 
-        if(itemPostDelay !== null) {
+        if (itemPostDelay !== null) {
           const item = JSON.parse(itemPostDelay);
 
-          if(item.id === this.id && item.iat === iat) {
+          if (item.id === this.id && item.iat === iat) {
             this.acquiredIatSet.add(iat);
-            this.refreshLock(key, iat)
+            this.refreshLock(key, iat);
             return true;
           }
         }
@@ -72,17 +75,17 @@ export default class Lock {
       return;
     }
 
-    const parsed = JSON.parse(lockObj)
+    const parsed = JSON.parse(lockObj);
 
-    if(parsed.id === this.id) {
-      await getProcessLock().lock(parsed.iat)
+    if (parsed.id === this.id) {
+      await getProcessLock().lock(parsed.iat);
 
-      this.acquiredIatSet.delete(parsed.iat)
-      await this.removeItem(storageKey)
+      this.acquiredIatSet.delete(parsed.iat);
+      await this.removeItem(storageKey);
 
-      getProcessLock().unlock(parsed.iat)
+      getProcessLock().unlock(parsed.iat);
 
-      this.notifyWaiters()
+      this.notifyWaiters();
     }
   }
 
@@ -90,109 +93,110 @@ export default class Lock {
     setTimeout(async () => {
       await getProcessLock().lock(iat);
 
-      if(!this.acquiredIatSet.has(iat)) {
-        getProcessLock().unlock(iat)
-        return
+      if (!this.acquiredIatSet.has(iat)) {
+        getProcessLock().unlock(iat);
+        return;
       }
 
-      const item = await this.getItem(key)
+      const item = await this.getItem(key);
 
-      if(item !== null) {
-        const parsed = JSON.parse(item)
-        parsed.timeUpdated = Date.now()
-        await this.setItem(key, JSON.stringify(parsed))
-        getProcessLock().unlock(iat)
+      if (item !== null) {
+        const parsed = JSON.parse(item);
+        parsed.timeUpdated = Date.now();
+        await this.setItem(key, JSON.stringify(parsed));
+        getProcessLock().unlock(iat);
       } else {
-        getProcessLock().unlock(iat)
-        return
+        getProcessLock().unlock(iat);
+        return;
       }
-      this.refreshLock(key, iat)
-    }, 1000)
+      this.refreshLock(key, iat);
+    }, 1000);
   }
 
   private async lockCorrector() {
     const minTime = Date.now() - 5000;
-    const keys = await this.allKeys()
+    const keys = await this.allKeys();
 
-    let notifyWaiters = false
+    let notifyWaiters = false;
     for await (let key of keys) {
-      if(key.includes(LOCK_STORAGE_PREFIX)) {
+      if (key.includes(LOCK_STORAGE_PREFIX)) {
         let lockObj = await this.getItem(key);
-        if(lockObj !== null) {
-          const parsed = JSON.parse(lockObj)
-          if(parsed.timeUpdated < minTime) {
-            this.removeItem(key)
-            notifyWaiters = true
+        if (lockObj !== null) {
+          const parsed = JSON.parse(lockObj);
+          if (parsed.timeUpdated < minTime) {
+            this.removeItem(key);
+            notifyWaiters = true;
           }
         }
       }
     }
 
-    if(notifyWaiters) {
-      this.notifyWaiters()
+    if (notifyWaiters) {
+      this.notifyWaiters();
     }
   }
-
 
   private async waitForSomethingToChange(maxTime: number) {
     await new Promise<void>(resolve => {
-      let resolveCalled = false
-      let startedAt = Date.now()
-      const minTime = 50
-      let removedListeners = false
+      let resolveCalled = false;
+      let startedAt = Date.now();
+      const minTime = 50;
+      let removedListeners = false;
 
       const stopWaiting = () => {
-        if(!removedListeners) {
-          browser.storage.onChanged.removeListener(stopWaiting)
-          this.removeFromWaiting(stopWaiting)
-          clearTimeout(timeoutId)
-          removedListeners = true
+        if (!removedListeners) {
+          browser.storage.onChanged.removeListener(stopWaiting);
+          this.removeFromWaiting(stopWaiting);
+          clearTimeout(timeoutId);
+          removedListeners = true;
         }
 
-        if(!resolveCalled) {
-          resolveCalled = true
-          let timeToWait = minTime - (Date.now() - startedAt)
-          if(timeToWait > 0) {
-            setTimeout(resolve, timeToWait)
+        if (!resolveCalled) {
+          resolveCalled = true;
+          let timeToWait = minTime - (Date.now() - startedAt);
+          if (timeToWait > 0) {
+            setTimeout(resolve, timeToWait);
           } else {
-            resolve()
+            resolve();
           }
         }
-      }
+      };
 
-      browser.storage.onChanged.addListener(stopWaiting)
-      this.addToWaiting(stopWaiting)
-      let timeoutId = setTimeout(stopWaiting, Math.max(0, maxTime - Date.now()))
-    })
+      browser.storage.onChanged.addListener(stopWaiting);
+      this.addToWaiting(stopWaiting);
+      let timeoutId = setTimeout(
+        stopWaiting,
+        Math.max(0, maxTime - Date.now())
+      );
+    });
   }
 
   private addToWaiting(func: any) {
-      this.removeFromWaiting(func);
-      if (this.waiters === undefined) {
-          return;
-      }
-      this.waiters.push(func);
+    this.removeFromWaiting(func);
+    if (this.waiters === undefined) {
+      return;
+    }
+    this.waiters.push(func);
   }
 
   private removeFromWaiting(func: any) {
-      if (this.waiters === undefined) {
-          return;
-      }
-      this.waiters = this.waiters.filter(i => i !== func);
+    if (this.waiters === undefined) {
+      return;
+    }
+    this.waiters = this.waiters.filter(i => i !== func);
   }
 
-
   private notifyWaiters() {
-    if(this.waiters === undefined) {
-      return
+    if (this.waiters === undefined) {
+      return;
     }
 
-    [...this.waiters].forEach(i => i())
+    [...this.waiters].forEach(i => i());
   }
 
   private async allKeys(): Promise<string[]> {
-    const items = await browser.storage.local.get(null)
-    return Object.keys(items)
+    const items = await browser.storage.local.get(null);
+    return Object.keys(items);
   }
 
   private async hasKey(key: string): Promise<boolean> {
@@ -201,7 +205,7 @@ export default class Lock {
   }
 
   private async setItem(key: string, value: string): Promise<void> {
-    return await browser.storage.local.set({ [key]: value })
+    return await browser.storage.local.set({ [key]: value });
   }
 
   private async getItem(key: string): Promise<string | null> {
@@ -211,6 +215,6 @@ export default class Lock {
   }
 
   private async removeItem(key: string): Promise<void> {
-    return await browser.storage.local.remove(key)
+    return await browser.storage.local.remove(key);
   }
 }

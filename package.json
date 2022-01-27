@@ -10,7 +10,8 @@
     "build": "rimraf dist && rollup -m -c --environment NODE_ENV:production",
     "dev": "rimraf dist && rollup -mcw",
     "test": "jest --coverage --silent",
-    "test:watch": "jest --coverage --watch"
+    "test:watch": "jest --coverage --watch",
+    "prepare": "husky install"
   },
   "repository": {
     "type": "git",
@@ -25,6 +26,9 @@
     "src",
     "dist"
   ],
+  "lint-staged": {
+    "**/*": "prettier --write --ignore-unknown"
+  },
   "packageManager": "yarn@3.1.1",
   "devDependencies": {
     "@rollup/plugin-commonjs": "^21.0.1",
@@ -34,11 +38,14 @@
     "@types/jest": "^27.4.0",
     "@types/jest-environment-puppeteer": "^5.0.0",
     "@types/webextension-polyfill": "^0.8.2",
+    "husky": "^7.0.4",
     "idtoken-verifier": "^2.2.2",
     "jest": "^27.4.7",
     "jest-puppeteer": "^6.0.3",
     "jsonwebtoken": "^8.5.1",
+    "lint-staged": "^12.3.2",
     "pem": "^1.14.6",
+    "prettier": "^2.5.1",
     "puppeteer-core": "^13.1.2",
     "rimraf": "^3.0.2",
     "rollup": "^2.66.0",

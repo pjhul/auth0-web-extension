@@ -11,7 +11,7 @@ describe('Promise Utils', () => {
       await delay(100).then(cb);
 
       expect(cb).toHaveBeenCalledTimes(1);
-    })
+    });
   });
 
   describe('singlePromise', () => {
@@ -20,7 +20,7 @@ describe('Promise Utils', () => {
 
       await Promise.all([
         singlePromise(cb as any, 'test-key'),
-        singlePromise(cb as any, 'test-key')
+        singlePromise(cb as any, 'test-key'),
       ]);
 
       expect(cb).toHaveBeenCalledTimes(1);
@@ -31,7 +31,7 @@ describe('Promise Utils', () => {
 
       await Promise.all([
         singlePromise(cb as any, 'test-key'),
-        singlePromise(cb as any, 'test-key2')
+        singlePromise(cb as any, 'test-key2'),
       ]);
 
       expect(cb).toHaveBeenCalledTimes(2);
@@ -65,7 +65,7 @@ describe('Promise Utils', () => {
         }
 
         i++;
-        return Promise.reject("Promise failed");
+        return Promise.reject('Promise failed');
       });
 
       const value = await retryPromise(cb as any);
@@ -75,7 +75,7 @@ describe('Promise Utils', () => {
     });
 
     it('resolves to null when all retries reject', async () => {
-      const cb = jest.fn().mockRejectedValue("Promise failed");
+      const cb = jest.fn().mockRejectedValue('Promise failed');
 
       const value = await retryPromise(cb as any, 5);
 

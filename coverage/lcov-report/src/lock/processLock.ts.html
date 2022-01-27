@@ -124,10 +124,14 @@
 <a name='L59'></a><a href='#L59'>59</a>
 <a name='L60'></a><a href='#L60'>60</a>
 <a name='L61'></a><a href='#L61'>61</a>
-<a name='L62'></a><a href='#L62'>62</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -187,64 +191,66 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">declare let setTimeout: any;
 <span class="fstat-no" title="function not covered" >class P</span>rocessLocking {
-    static instance: undefined | ProcessLocking;
-    private <span class="cstat-no" title="statement not covered" >locked: Map&lt;string, (() =&gt; void)[]&gt; = new Map&lt;string, (() =&gt; void)[]&gt;();</span>
+  static instance: undefined | ProcessLocking;
+  private <span class="cstat-no" title="statement not covered" >locked: Map&lt;string, (() =&gt; void)[]&gt; = new Map&lt;</span>
+    string,
+    (() =&gt; void)[]
+  &gt;();
 &nbsp;
-&nbsp;
-<span class="fstat-no" title="function not covered" >    static </span>getInstance() {
-<span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if (ProcessLocking.instance === undefined) {</span>
-<span class="cstat-no" title="statement not covered" >            ProcessLocking.instance = new ProcessLocking();</span>
-        }
-<span class="cstat-no" title="statement not covered" >        return ProcessLocking.instance;</span>
+<span class="fstat-no" title="function not covered" >  static </span>getInstance() {
+<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (ProcessLocking.instance === undefined) {</span>
+<span class="cstat-no" title="statement not covered" >      ProcessLocking.instance = new ProcessLocking();</span>
     }
+<span class="cstat-no" title="statement not covered" >    return ProcessLocking.instance;</span>
+  }
 &nbsp;
-    private <span class="cstat-no" title="statement not covered" >addToLocked = <span class="fstat-no" title="function not covered" >(k</span>ey: string, toAdd?: () =&gt; void) =&gt; {</span>
-        let callbacks = <span class="cstat-no" title="statement not covered" >this.locked.get(key);</span>
-<span class="cstat-no" title="statement not covered" >        if (callbacks === undefined) {</span>
-<span class="cstat-no" title="statement not covered" >            if (toAdd === undefined) {</span>
-<span class="cstat-no" title="statement not covered" >                this.locked.set(key, []);</span>
-            } else {
-<span class="cstat-no" title="statement not covered" >                this.locked.set(key, [toAdd]);</span>
-            }
-        } else {
-<span class="cstat-no" title="statement not covered" >            <span class="missing-if-branch" title="if path not taken" >I</span>if (toAdd !== undefined) {</span>
-<span class="cstat-no" title="statement not covered" >                callbacks.unshift(toAdd);</span>
-<span class="cstat-no" title="statement not covered" >                this.locked.set(key, callbacks);</span>
-            }
-        }
-    }
-&nbsp;
-<span class="cstat-no" title="statement not covered" >    isLocked = <span class="fstat-no" title="function not covered" >(k</span>ey: string): boolean =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >        return this.locked.has(key);</span>
-    }
-&nbsp;
-<span class="cstat-no" title="statement not covered" >    lock = <span class="fstat-no" title="function not covered" >(k</span>ey: string): Promise&lt;void&gt; =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >        return new Promise&lt;void&gt;(<span class="fstat-no" title="function not covered" >(r</span>esolve, reject) =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >            if (this.isLocked(key)) {</span>
-<span class="cstat-no" title="statement not covered" >                this.addToLocked(key, resolve);</span>
-            } else {
-<span class="cstat-no" title="statement not covered" >                this.addToLocked(key);</span>
-<span class="cstat-no" title="statement not covered" >                resolve();</span>
-            }
-        });
-    }
-&nbsp;
-<span class="cstat-no" title="statement not covered" >    unlock = <span class="fstat-no" title="function not covered" >(k</span>ey: string) =&gt; {</span>
-        let callbacks = <span class="cstat-no" title="statement not covered" >this.locked.get(key);</span>
-<span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if (callbacks === undefined || callbacks.length === 0) {</span>
-<span class="cstat-no" title="statement not covered" >            this.locked.delete(key);</span>
-<span class="cstat-no" title="statement not covered" >            return;</span>
-        }
-        let toCall = <span class="cstat-no" title="statement not covered" >callbacks.pop();</span>
+  private <span class="cstat-no" title="statement not covered" >addToLocked = <span class="fstat-no" title="function not covered" >(k</span>ey: string, toAdd?: () =&gt; void) =&gt; {</span>
+    let callbacks = <span class="cstat-no" title="statement not covered" >this.locked.get(key);</span>
+<span class="cstat-no" title="statement not covered" >    if (callbacks === undefined) {</span>
+<span class="cstat-no" title="statement not covered" >      if (toAdd === undefined) {</span>
+<span class="cstat-no" title="statement not covered" >        this.locked.set(key, []);</span>
+      } else {
+<span class="cstat-no" title="statement not covered" >        this.locked.set(key, [toAdd]);</span>
+      }
+    } else {
+<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (toAdd !== undefined) {</span>
+<span class="cstat-no" title="statement not covered" >        callbacks.unshift(toAdd);</span>
 <span class="cstat-no" title="statement not covered" >        this.locked.set(key, callbacks);</span>
-<span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if (toCall !== undefined) {</span>
-<span class="cstat-no" title="statement not covered" >            setTimeout(toCall, 0);</span>
-        }
+      }
     }
+  };
+&nbsp;
+<span class="cstat-no" title="statement not covered" >  isLocked = <span class="fstat-no" title="function not covered" >(k</span>ey: string): boolean =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    return this.locked.has(key);</span>
+  };
+&nbsp;
+<span class="cstat-no" title="statement not covered" >  lock = <span class="fstat-no" title="function not covered" >(k</span>ey: string): Promise&lt;void&gt; =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    return new Promise&lt;void&gt;(<span class="fstat-no" title="function not covered" >(r</span>esolve, reject) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >      if (this.isLocked(key)) {</span>
+<span class="cstat-no" title="statement not covered" >        this.addToLocked(key, resolve);</span>
+      } else {
+<span class="cstat-no" title="statement not covered" >        this.addToLocked(key);</span>
+<span class="cstat-no" title="statement not covered" >        resolve();</span>
+      }
+    });
+  };
+&nbsp;
+<span class="cstat-no" title="statement not covered" >  unlock = <span class="fstat-no" title="function not covered" >(k</span>ey: string) =&gt; {</span>
+    let callbacks = <span class="cstat-no" title="statement not covered" >this.locked.get(key);</span>
+<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (callbacks === undefined || callbacks.length === 0) {</span>
+<span class="cstat-no" title="statement not covered" >      this.locked.delete(key);</span>
+<span class="cstat-no" title="statement not covered" >      return;</span>
+    }
+    let toCall = <span class="cstat-no" title="statement not covered" >callbacks.pop();</span>
+<span class="cstat-no" title="statement not covered" >    this.locked.set(key, callbacks);</span>
+<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (toCall !== undefined) {</span>
+<span class="cstat-no" title="statement not covered" >      setTimeout(toCall, 0);</span>
+    }
+  };
 }
 &nbsp;
 export default function <span class="fstat-no" title="function not covered" >getLock(</span>): ProcessLocking {
-<span class="cstat-no" title="statement not covered" >    return ProcessLocking.getInstance();</span>
+<span class="cstat-no" title="statement not covered" >  return ProcessLocking.getInstance();</span>
 }
 &nbsp;</pre></td></tr></table></pre>
 
@@ -253,7 +259,7 @@ export default function <span class="fstat-no" title="function not covered" >get
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at Thu Jan 27 2022 17:58:49 GMT-0500 (Eastern Standard Time)
+                at Thu Jan 27 2022 18:10:29 GMT-0500 (Eastern Standard Time)
             </div>
         <script src="../../prettify.js"></script>
         <script>

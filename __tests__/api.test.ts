@@ -1,8 +1,6 @@
 import fetch from 'unfetch';
 
-import {
-  DEFAULT_SILENT_TOKEN_RETRY_COUNT
-} from '../src/constants';
+import { DEFAULT_SILENT_TOKEN_RETRY_COUNT } from '../src/constants';
 
 import { oauthToken } from '../src/api';
 
@@ -53,7 +51,7 @@ describe('oauthToken', () => {
         'Content-Type': 'application/json',
       },
       method: 'POST',
-      signal: abortController.signal
+      signal: abortController.signal,
     });
 
     expect(mockFetch.mock.calls[0][1].signal).not.toBeUndefined();
@@ -62,14 +60,14 @@ describe('oauthToken', () => {
   it('handles error with error response', async () => {
     const theError = {
       error: 'the-error',
-      error_description: 'the-error-description'
+      error_description: 'the-error-description',
     };
 
     mockFetch.mockReturnValue(
       new Promise(res =>
         res({
           ok: false,
-          json: () => new Promise(ress => ress(theError))
+          json: () => new Promise(ress => ress(theError)),
         })
       )
     );
@@ -94,7 +92,7 @@ describe('oauthToken', () => {
       new Promise(res =>
         res({
           ok: false,
-          json: () => new Promise(ress => ress(false))
+          json: () => new Promise(ress => ress(false)),
         })
       )
     );
@@ -151,7 +149,7 @@ describe('oauthToken', () => {
       .mockReturnValue(
         Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ access_token: 'access-token' })
+          json: () => Promise.resolve({ access_token: 'access-token' }),
         })
       );
 
@@ -189,7 +187,7 @@ describe('oauthToken', () => {
           () =>
             resolve({
               ok: true,
-              json: () => Promise.resolve({ access_token: 'access-token' })
+              json: () => Promise.resolve({ access_token: 'access-token' }),
             }),
           500
         );
@@ -216,7 +214,7 @@ describe('oauthToken', () => {
   it('retries the request in the event of a timeout', async () => {
     const fetchResult = {
       ok: true,
-      json: () => Promise.resolve({ access_token: 'access-token' })
+      json: () => Promise.resolve({ access_token: 'access-token' }),
     };
 
     mockFetch.mockReturnValueOnce(

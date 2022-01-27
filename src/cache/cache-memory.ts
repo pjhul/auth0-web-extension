@@ -1,4 +1,4 @@
-import { Cacheable, ICache } from "./shared"
+import { Cacheable, ICache } from './shared';
 
 export class InMemoryCache {
   public enclosedCache: ICache = (function () {
@@ -12,7 +12,7 @@ export class InMemoryCache {
       get<T = Cacheable>(key: string) {
         const cacheEntry = cache[key] as T;
 
-        if(!cacheEntry) {
+        if (!cacheEntry) {
           return null;
         }
 
@@ -25,7 +25,7 @@ export class InMemoryCache {
 
       allKeys(): string[] {
         return Object.keys(cache);
-      }
+      },
     };
-  })()
+  })();
 }

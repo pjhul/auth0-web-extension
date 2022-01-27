@@ -49,7 +49,7 @@ In your manifest, you will need to add a couple items.
 In your background script, create an `Auth0Client` instance
 
 ```js
-import createAuth0Client from "auth0-web-extension"
+import createAuth0Client from 'auth0-web-extension';
 
 const auth0 = createAuth0Client({
   domain: '<AUTH0_DOMAIN>',

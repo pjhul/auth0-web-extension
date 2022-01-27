@@ -696,7 +696,12 @@
 <a name='L631'></a><a href='#L631'>631</a>
 <a name='L632'></a><a href='#L632'>632</a>
 <a name='L633'></a><a href='#L633'>633</a>
-<a name='L634'></a><a href='#L634'>634</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
+<a name='L634'></a><a href='#L634'>634</a>
+<a name='L635'></a><a href='#L635'>635</a>
+<a name='L636'></a><a href='#L636'>636</a>
+<a name='L637'></a><a href='#L637'>637</a>
+<a name='L638'></a><a href='#L638'>638</a>
+<a name='L639'></a><a href='#L639'>639</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1012,6 +1017,10 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -1059,6 +1068,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -1070,7 +1080,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1116,9 +1125,6 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1126,6 +1132,8 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -1227,6 +1235,8 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1329,9 +1339,9 @@
 <span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import browser from "webextension-polyfill"
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import browser from 'webextension-polyfill';
 &nbsp;
-import Lock from "./lock"
+import Lock from './lock';
 &nbsp;
 import {
   bufferToBase64UrlEncoded,
@@ -1340,11 +1350,11 @@ import {
   encode,
   sha256,
   validateCrypto,
-} from "./utils"
+} from './utils';
 &nbsp;
-import { oauthToken } from "./api"
-import { verifyIdToken } from "./jwt"
-import { getUniqueScopes } from "./scope"
+import { oauthToken } from './api';
+import { verifyIdToken } from './jwt';
+import { getUniqueScopes } from './scope';
 &nbsp;
 import {
   InMemoryCache,
@@ -1352,7 +1362,7 @@ import {
   CacheKeyManifest,
   CacheManager,
   CacheKey,
-} from "./cache"
+} from './cache';
 &nbsp;
 import {
   DEFAULT_SCOPE,
@@ -1361,7 +1371,7 @@ import {
   CHILD_PORT_NAME,
   PARENT_PORT_NAME,
   RECOVERABLE_ERRORS,
-} from "./constants"
+} from './constants';
 &nbsp;
 import {
   BaseLoginOptions,
@@ -1377,44 +1387,44 @@ import {
   GetUserOptions,
   IdToken,
   GetIdTokenClaimsOptions,
-} from "./global"
+} from './global';
 &nbsp;
-import { TimeoutError } from "./errors"
+import { TimeoutError } from './errors';
 &nbsp;
-import { singlePromise, retryPromise, delay } from "./promise-utils"
+import { singlePromise, retryPromise, delay } from './promise-utils';
 &nbsp;
 const lock = new Lock();
 &nbsp;
-const GET_TOKEN_SILENTLY_LOCK_KEY = "auth0.lock.getTokenSilently";
+const GET_TOKEN_SILENTLY_LOCK_KEY = 'auth0.lock.getTokenSilently';
 &nbsp;
 /**
  * Auth0 SDK for Background Scripts in a Web Extension
  */
 export default class Auth0Client {
   private cacheManager: CacheManager;
-  private customOptions: BaseLoginOptions
-  private domainUrl: string
-  private tokenIssuer: string
-  private defaultScope: string
-  private scope: string | undefined
-  private nowProvider: () =&gt; number | Promise&lt;number&gt;
+  private customOptions: BaseLoginOptions;
+  private domainUrl: string;
+  private tokenIssuer: string;
+  private defaultScope: string;
+  private scope: string | undefined;
+  private nowProvider: () =&gt; number | Promise&lt;number&gt;;
 &nbsp;
-  cacheLocation: CacheLocation
+  cacheLocation: CacheLocation;
 &nbsp;
   constructor(private options: Auth0ClientOptions) {
     validateCrypto();
 &nbsp;
     // TODO: find a way to validate we are running in a background script
 &nbsp;
-    <span class="missing-if-branch" title="if path not taken" >I</span>if(options.cache &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >options.cacheLocation)</span> {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (options.cache &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >options.cacheLocation)</span> {
 <span class="cstat-no" title="statement not covered" >      console.warn(</span>
-        "Both `cache` and `cacheLocation` options have been specified in the Auth0Client configuration; ignoring `cacheLocation` and using `cache`."
+        'Both `cache` and `cacheLocation` options have been specified in the Auth0Client configuration; ignoring `cacheLocation` and using `cache`.'
       );
     }
 &nbsp;
     let cache: ICache;
 &nbsp;
-    <span class="missing-if-branch" title="if path not taken" >I</span>if(options.cache) {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (options.cache) {
 <span class="cstat-no" title="statement not covered" >      cache = options.cache;</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >      this.cacheLocation = CACHE_LOCATION_MEMORY;</span>
@@ -1423,7 +1433,7 @@ export default class Auth0Client {
 &nbsp;
       const factory = cacheFactory(this.cacheLocation);
 &nbsp;
-      if(!factory) {
+      if (!factory) {
         throw new Error(`Invalid cache location "${this.cacheLocation}"`);
       }
 &nbsp;
@@ -1439,20 +1449,20 @@ export default class Auth0Client {
       !cache.allKeys
         ? <span class="branch-0 cbranch-no" title="branch not covered" >new CacheKeyManifest(cache, this.options.client_id)</span>
         : null,
-      this.nowProvider,
+      this.nowProvider
     );
 &nbsp;
     this.domainUrl = getDomain(this.options.domain);
     this.tokenIssuer = getTokenIssuer(this.options.issuer, this.domainUrl);
 &nbsp;
     this.defaultScope = getUniqueScopes(
-      "openid",
+      'openid',
       this.options<span class="branch-0 cbranch-no" title="branch not covered" >?.a</span>dvancedOptions?.defaultScope !== undefined
         ? this.options.advancedOptions.defaultScope
-        : DEFAULT_SCOPE,
+        : DEFAULT_SCOPE
     );
 &nbsp;
-    <span class="missing-if-branch" title="if path not taken" >I</span>if(this.options.useRefreshTokens) {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (this.options.useRefreshTokens) {
       // TODO: Add support for refresh tokens
     }
 &nbsp;
@@ -1461,7 +1471,7 @@ export default class Auth0Client {
 &nbsp;
   private <span class="fstat-no" title="function not covered" >_url(</span>path: string) {
     // TODO: Not sure if we should include the auth0Client param or not?
-<span class="cstat-no" title="statement not covered" >    return `${this.domainUrl}${path}`</span>
+<span class="cstat-no" title="statement not covered" >    return `${this.domainUrl}${path}`;</span>
   }
 &nbsp;
   private <span class="fstat-no" title="function not covered" >_getParams(</span>
@@ -1469,7 +1479,7 @@ export default class Auth0Client {
     state: string,
     nonce: string,
     code_challenge: string,
-    redirect_uri: string | undefined,
+    redirect_uri: string | undefined
   ): AuthorizeOptions {
     // These options should be excluded from the authorize URL,
     // as they"re options for the client and not for the IdP.
@@ -1499,13 +1509,13 @@ export default class Auth0Client {
         this.scope,
         authorizeOptions.scope
       ),
-      response_type: "code",
-      response_mode: "query",
+      response_type: 'code',
+      response_mode: 'query',
       state,
       nonce,
       redirect_uri: redirect_uri || this.options.redirect_uri,
       code_challenge,
-      code_challenge_method: "S256"
+      code_challenge_method: 'S256',
     };
   }
 &nbsp;
@@ -1530,7 +1540,7 @@ export default class Auth0Client {
   public async <span class="fstat-no" title="function not covered" >getUser&lt;</span>TUser extends User&gt;(
     options: GetUserOptions = <span class="branch-0 cbranch-no" title="branch not covered" >{}</span>
   ): Promise&lt;TUser | undefined&gt; {
-    const audience = <span class="cstat-no" title="statement not covered" >options.audience || this.options.audience || "default";</span>
+    const audience = <span class="cstat-no" title="statement not covered" >options.audience || this.options.audience || 'default';</span>
     const scope = <span class="cstat-no" title="statement not covered" >getUniqueScopes(this.defaultScope, this.scope, options.scope);</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    await this.checkSession({</span>
@@ -1565,7 +1575,7 @@ export default class Auth0Client {
   public async <span class="fstat-no" title="function not covered" >getIdTokenClaims(</span>
     options: GetIdTokenClaimsOptions = <span class="branch-0 cbranch-no" title="branch not covered" >{}</span>
   ): Promise&lt;IdToken | undefined&gt; {
-    const audience = <span class="cstat-no" title="statement not covered" >options.audience || this.options.audience || "default";</span>
+    const audience = <span class="cstat-no" title="statement not covered" >options.audience || this.options.audience || 'default';</span>
     const scope = <span class="cstat-no" title="statement not covered" >getUniqueScopes(this.defaultScope, this.scope, options.scope);</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    await this.checkSession({</span>
@@ -1603,8 +1613,8 @@ export default class Auth0Client {
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
 <span class="cstat-no" title="statement not covered" >      await this.getTokenSilently(options);</span>
-    } catch(error) {
-<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if(!RECOVERABLE_ERRORS.includes((error as any).error)) {</span>
+    } catch (error) {
+<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (!RECOVERABLE_ERRORS.includes((error as any).error)) {</span>
 <span class="cstat-no" title="statement not covered" >        throw error;</span>
       }
     }
@@ -1612,11 +1622,11 @@ export default class Auth0Client {
 &nbsp;
   public async getTokenSilently(
     options: GetTokenSilentlyOptions &amp; { detailedResponse: true }
-  ): Promise&lt;GetTokenSilentlyVerboseResult&gt;
+  ): Promise&lt;GetTokenSilentlyVerboseResult&gt;;
 &nbsp;
   public async getTokenSilently(
-    options?: GetTokenSilentlyOptions,
-  ): Promise&lt;string&gt;
+    options?: GetTokenSilentlyOptions
+  ): Promise&lt;string&gt;;
 &nbsp;
   /**
    * Fetches a new access token
@@ -1628,7 +1638,7 @@ export default class Auth0Client {
    * Refresh tokens are currently not supported
    */
   public async <span class="fstat-no" title="function not covered" >getTokenSilently(</span>
-    options: GetTokenSilentlyOptions = <span class="branch-0 cbranch-no" title="branch not covered" >{},</span>
+    options: GetTokenSilentlyOptions = <span class="branch-0 cbranch-no" title="branch not covered" >{}</span>
   ): Promise&lt;string | GetTokenSilentlyVerboseResult&gt; {
 <span class="cstat-no" title="statement not covered" >    return singlePromise(</span>
 <span class="fstat-no" title="function not covered" >      () =</span>&gt;
@@ -1638,44 +1648,48 @@ export default class Auth0Client {
           ...options,
           scope: getUniqueScopes(this.defaultScope, this.scope, options.scope),
         }),
-      `${this.options.client_id}::${this.options.audience}::${getUniqueScopes(this.defaultScope, this.scope, options.scope)}`
+      `${this.options.client_id}::${this.options.audience}::${getUniqueScopes(
+        this.defaultScope,
+        this.scope,
+        options.scope
+      )}`
     );
   }
 &nbsp;
   private async <span class="fstat-no" title="function not covered" >_getTokenSilently(</span>
-    options: GetTokenSilentlyOptions = <span class="branch-0 cbranch-no" title="branch not covered" >{},</span>
+    options: GetTokenSilentlyOptions = <span class="branch-0 cbranch-no" title="branch not covered" >{}</span>
   ): Promise&lt;string | GetTokenSilentlyVerboseResult&gt; {
     const { ignoreCache, ...getTokenOptions<span class="cstat-no" title="statement not covered" > } = <span class="cstat-no" title="statement not covered" >o</span>ptions;</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if(!ignoreCache &amp;&amp; getTokenOptions.scope) {</span>
+<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (!ignoreCache &amp;&amp; getTokenOptions.scope) {</span>
       const entry = <span class="cstat-no" title="statement not covered" >await this._getEntryFromCache({</span>
         scope: getTokenOptions.scope,
-        audience: getTokenOptions.audience || "default",
+        audience: getTokenOptions.audience || 'default',
         client_id: this.options.client_id,
         getDetailedEntry: options.detailedResponse,
       });
 &nbsp;
-<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if(entry) {</span>
+<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (entry) {</span>
 <span class="cstat-no" title="statement not covered" >        return entry;</span>
       }
     }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    if(</span>
+<span class="cstat-no" title="statement not covered" >    if (</span>
       await retryPromise(
 <span class="fstat-no" title="function not covered" >        () =</span>&gt; <span class="cstat-no" title="statement not covered" >lock.acquireLock(GET_TOKEN_SILENTLY_LOCK_KEY, 5000),</span>
         10
       )
     ) {
 <span class="cstat-no" title="statement not covered" >      try {</span>
-<span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if(!ignoreCache &amp;&amp; getTokenOptions.scope) {</span>
+<span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if (!ignoreCache &amp;&amp; getTokenOptions.scope) {</span>
           const entry = <span class="cstat-no" title="statement not covered" >await this._getEntryFromCache({</span>
             scope: getTokenOptions.scope,
-            audience: getTokenOptions.audience || "default",
+            audience: getTokenOptions.audience || 'default',
             client_id: this.options.client_id,
             getDetailedEntry: options.detailedResponse,
           });
 &nbsp;
-<span class="cstat-no" title="statement not covered" >          <span class="missing-if-branch" title="if path not taken" >I</span>if(entry) {</span>
+<span class="cstat-no" title="statement not covered" >          <span class="missing-if-branch" title="if path not taken" >I</span>if (entry) {</span>
 <span class="cstat-no" title="statement not covered" >            return entry;</span>
           }
         }
@@ -1687,12 +1701,13 @@ export default class Auth0Client {
 <span class="cstat-no" title="statement not covered" >        await this.cacheManager.set({</span>
           client_id: this.options.client_id,
           ...authResult,
-        })
+        });
 &nbsp;
         // TODO: Save to cookies
 &nbsp;
-<span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if(options.detailedResponse) {</span>
-          const { id_token, access_token, oauthTokenScope, expires_in } = <span class="cstat-no" title="statement not covered" >authResult;</span>
+<span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if (options.detailedResponse) {</span>
+          const { id_token, access_token, oauthTokenScope, expires_in } =
+<span class="cstat-no" title="statement not covered" >            authResult;</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >          return {</span>
             id_token,
@@ -1703,9 +1718,8 @@ export default class Auth0Client {
         }
 &nbsp;
 <span class="cstat-no" title="statement not covered" >        return authResult.access_token;</span>
-&nbsp;
       } finally {
-<span class="cstat-no" title="statement not covered" >        await lock.releaseLock(GET_TOKEN_SILENTLY_LOCK_KEY)</span>
+<span class="cstat-no" title="statement not covered" >        await lock.releaseLock(GET_TOKEN_SILENTLY_LOCK_KEY);</span>
       }
     } else {
 <span class="cstat-no" title="statement not covered" >      throw new TimeoutError();</span>
@@ -1713,13 +1727,13 @@ export default class Auth0Client {
   }
 &nbsp;
   private async <span class="fstat-no" title="function not covered" >_getTokenUsingRefreshToken(</span>
-    options: GetTokenSilentlyOptions,
+    options: GetTokenSilentlyOptions
   ): Promise&lt;GetTokenSilentlyResult&gt; {
 <span class="cstat-no" title="statement not covered" >    throw "We currently don't support using refresh tokens, set useRefreshTokens to false";</span>
   }
 &nbsp;
   private async <span class="fstat-no" title="function not covered" >_getTokenFromIfFrame(</span>
-    options: GetTokenSilentlyOptions,
+    options: GetTokenSilentlyOptions
   ): Promise&lt;GetTokenSilentlyResult&gt; {
     const stateIn = <span class="cstat-no" title="statement not covered" >encode(createSecureRandomString());</span>
     const nonceIn = <span class="cstat-no" title="statement not covered" >encode(createSecureRandomString());</span>
@@ -1732,35 +1746,34 @@ export default class Auth0Client {
       stateIn,
       nonceIn,
       code_challenge,
-      options.redirect_uri || this.options.redirect_uri,
+      options.redirect_uri || this.options.redirect_uri
     );
 &nbsp;
     // TODO: Add support for organizations
 &nbsp;
     const url = <span class="cstat-no" title="statement not covered" >this._authorizeUrl({</span>
       ...params,
-      prompt: "none",
-      response_mode: "web_message",
+      prompt: 'none',
+      response_mode: 'web_message',
     });
 &nbsp;
     const timeout =
 <span class="cstat-no" title="statement not covered" >      options.timeoutInSeconds || this.options.authorizeTimeoutInSeconds;</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>
-      const tabId = <span class="cstat-no" title="statement not covered" >await retryPromise(</span>
-        this._getTabId,
-        10
-      );
+      const tabId = <span class="cstat-no" title="statement not covered" >await retryPromise(this._getTabId, 10);</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if(!tabId) {</span>
-<span class="cstat-no" title="statement not covered" >        throw "Failed to connect to tab too many times"</span>
+<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (!tabId) {</span>
+<span class="cstat-no" title="statement not covered" >        throw 'Failed to connect to tab too many times';</span>
       }
 &nbsp;
-      const codeResult: AuthenticationResult = <span class="cstat-no" title="statement not covered" >await new Promise(<span class="fstat-no" title="function not covered" >(r</span>esolve) =&gt; {</span>
-        const parentPort = <span class="cstat-no" title="statement not covered" >browser.tabs.connect(tabId, { name: PARENT_PORT_NAME });</span>
+      const codeResult: AuthenticationResult = <span class="cstat-no" title="statement not covered" >await new Promise(<span class="fstat-no" title="function not covered" >resolve </span>=&gt; {</span>
+        const parentPort = <span class="cstat-no" title="statement not covered" >browser.tabs.connect(tabId, {</span>
+          name: PARENT_PORT_NAME,
+        });
 &nbsp;
         const handler = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(c</span>hildPort: browser.Runtime.Port) =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >          <span class="missing-if-branch" title="if path not taken" >I</span>if(childPort.name === CHILD_PORT_NAME) {</span>
+<span class="cstat-no" title="statement not covered" >          <span class="missing-if-branch" title="if path not taken" >I</span>if (childPort.name === CHILD_PORT_NAME) {</span>
 <span class="cstat-no" title="statement not covered" >            childPort.onMessage.addListener(<span class="fstat-no" title="function not covered" >message </span>=&gt; {</span>
 <span class="cstat-no" title="statement not covered" >              resolve(message);</span>
 &nbsp;
@@ -1775,7 +1788,7 @@ export default class Auth0Client {
               domainUrl: this.domainUrl,
             });
           }
-        }
+        };
 &nbsp;
 <span class="cstat-no" title="statement not covered" >        browser.runtime.onConnect.addListener(handler);</span>
 &nbsp;
@@ -1784,8 +1797,8 @@ export default class Auth0Client {
         });
       });
 &nbsp;
-<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if(stateIn !== codeResult.state) {</span>
-<span class="cstat-no" title="statement not covered" >        throw new Error("Invalid state");</span>
+<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (stateIn !== codeResult.state) {</span>
+<span class="cstat-no" title="statement not covered" >        throw new Error('Invalid state');</span>
       }
 &nbsp;
       const {
@@ -1807,7 +1820,7 @@ export default class Auth0Client {
         client_id: this.options.client_id,
         code_verifier,
         code: codeResult.code,
-        grant_type: "authorization_code",
+        grant_type: 'authorization_code',
         redirect_uri: params.redirect_uri,
         useFormData: this.options.useFormData,
         auth0Client: {},
@@ -1815,7 +1828,7 @@ export default class Auth0Client {
 &nbsp;
       const decodedToken = <span class="cstat-no" title="statement not covered" >await this._verifyIdToken(</span>
         tokenResult.id_token,
-        nonceIn,
+        nonceIn
       );
 &nbsp;
 <span class="cstat-no" title="statement not covered" >      return {</span>
@@ -1823,10 +1836,10 @@ export default class Auth0Client {
         decodedToken,
         scope: params.scope,
         oauthTokenScope: tokenResult.scope as string,
-        audience: params.audience || "default",
+        audience: params.audience || 'default',
       };
-    } catch(e) {
-<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if((e as any).error === "login_required") {</span>
+    } catch (e) {
+<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if ((e as any).error === 'login_required') {</span>
         // TODO: Log user out
       }
 &nbsp;
@@ -1840,22 +1853,22 @@ export default class Auth0Client {
 &nbsp;
     const { id } = <span class="cstat-no" title="statement not covered" >currentTab || {};</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if(id) {</span>
+<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (id) {</span>
       // This will throw if there is not a content script running
-      const resp = <span class="cstat-no" title="statement not covered" >await browser.tabs.sendMessage(id, "");</span>
+      const resp = <span class="cstat-no" title="statement not covered" >await browser.tabs.sendMessage(id, '');</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if(resp === "ack") {</span>
+<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (resp === 'ack') {</span>
 <span class="cstat-no" title="statement not covered" >        return id;</span>
       }
     }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    throw "Could not access current tab.";</span>
+<span class="cstat-no" title="statement not covered" >    throw 'Could not access current tab.';</span>
   }
 &nbsp;
   private async <span class="fstat-no" title="function not covered" >_verifyIdToken(</span>
     id_token: string,
     nonce?: string,
-    organizationId?: string,
+    organizationId?: string
   ) {
     const now = <span class="cstat-no" title="statement not covered" >await this.nowProvider();</span>
 &nbsp;
@@ -1876,7 +1889,9 @@ export default class Auth0Client {
     audience,
     client_id,
     getDetailedEntry = <span class="branch-0 cbranch-no" title="branch not covered" >false,</span>
-  }: GetEntryFromCacheOptions): Promise&lt;string | GetTokenSilentlyVerboseResult | undefined&gt; {
+  }: GetEntryFromCacheOptions): Promise&lt;
+    string | GetTokenSilentlyVerboseResult | undefined
+  &gt; {
     const entry = <span class="cstat-no" title="statement not covered" >await this.cacheManager.get(</span>
       new CacheKey({
         scope,
@@ -1886,11 +1901,11 @@ export default class Auth0Client {
       60
     );
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if(entry &amp;&amp; entry.access_token) {</span>
-<span class="cstat-no" title="statement not covered" >      if(getDetailedEntry) {</span>
+<span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (entry &amp;&amp; entry.access_token) {</span>
+<span class="cstat-no" title="statement not covered" >      if (getDetailedEntry) {</span>
         const { id_token, access_token, oauthTokenScope, expires_in } = <span class="cstat-no" title="statement not covered" >entry;</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if(!id_token || !expires_in) {</span>
+<span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="if path not taken" >I</span>if (!id_token || !expires_in) {</span>
 <span class="cstat-no" title="statement not covered" >          return undefined;</span>
         }
 &nbsp;
@@ -1908,36 +1923,36 @@ export default class Auth0Client {
 }
 &nbsp;
 const parseNumber = <span class="fstat-no" title="function not covered" >(v</span>alue: any): number | undefined =&gt; {
-<span class="cstat-no" title="statement not covered" >  if(typeof value !== "string") {</span>
+<span class="cstat-no" title="statement not covered" >  if (typeof value !== 'string') {</span>
 <span class="cstat-no" title="statement not covered" >    return value;</span>
   } else {
-<span class="cstat-no" title="statement not covered" >    return parseInt(value, 10) || undefined</span>
+<span class="cstat-no" title="statement not covered" >    return parseInt(value, 10) || undefined;</span>
   }
-}
+};
 &nbsp;
 const getDomain = (domainUrl: string) =&gt; {
-  if(!/^https?:\/\//.test(domainUrl)) {
+  if (!/^https?:\/\//.test(domainUrl)) {
     return `https://${domainUrl}`;
   } else {
     return domainUrl;
   }
-}
+};
 &nbsp;
 const cacheLocationBuilders: Record&lt;string, () =&gt; ICache&gt; = {
   [CACHE_LOCATION_MEMORY]: () =&gt; new InMemoryCache().enclosedCache,
-}
+};
 &nbsp;
 const cacheFactory = (location: string) =&gt; {
   return cacheLocationBuilders[location];
-}
+};
 &nbsp;
 const getTokenIssuer = (issuer: string | undefined, domainUrl: string) =&gt; {
-  if(issuer) {
-    return issuer.startsWith("https://") ? issuer : `https://${issuer}/`;
+  if (issuer) {
+    return issuer.startsWith('https://') ? issuer : `https://${issuer}/`;
   } else {
     return `${domainUrl}/`;
   }
-}
+};
 &nbsp;
 const getCustomInitialOptions = (
   options: Auth0ClientOptions
@@ -1961,7 +1976,7 @@ const getCustomInitialOptions = (
     ...customParams
   } = options;
   return customParams;
-}
+};
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -1969,7 +1984,7 @@ const getCustomInitialOptions = (
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at Thu Jan 27 2022 17:58:49 GMT-0500 (Eastern Standard Time)
+                at Thu Jan 27 2022 18:10:29 GMT-0500 (Eastern Standard Time)
             </div>
         <script src="../prettify.js"></script>
         <script>

@@ -173,33 +173,13 @@
 <a name='L108'></a><a href='#L108'>108</a>
 <a name='L109'></a><a href='#L109'>109</a>
 <a name='L110'></a><a href='#L110'>110</a>
-<a name='L111'></a><a href='#L111'>111</a>
-<a name='L112'></a><a href='#L112'>112</a>
-<a name='L113'></a><a href='#L113'>113</a>
-<a name='L114'></a><a href='#L114'>114</a>
-<a name='L115'></a><a href='#L115'>115</a>
-<a name='L116'></a><a href='#L116'>116</a>
-<a name='L117'></a><a href='#L117'>117</a>
-<a name='L118'></a><a href='#L118'>118</a>
-<a name='L119'></a><a href='#L119'>119</a>
-<a name='L120'></a><a href='#L120'>120</a>
-<a name='L121'></a><a href='#L121'>121</a>
-<a name='L122'></a><a href='#L122'>122</a>
-<a name='L123'></a><a href='#L123'>123</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L111'></a><a href='#L111'>111</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
@@ -217,10 +197,6 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -307,60 +283,48 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import browser from "webextension-polyfill"
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import browser from 'webextension-polyfill';
 &nbsp;
-import {
-  PARENT_PORT_NAME,
-  CHILD_PORT_NAME,
-} from "./constants"
+import { PARENT_PORT_NAME, CHILD_PORT_NAME } from './constants';
 &nbsp;
-import {
-  AuthenticationResult,
-} from "./global"
+import { AuthenticationResult } from './global';
 &nbsp;
-import {
-  TimeoutError,
-  GenericError,
-} from "./errors"
+import { TimeoutError, GenericError } from './errors';
 &nbsp;
 // We can probably pull redirectUri from background script at some point
 export function <span class="fstat-no" title="function not covered" >handleTokenRequest(</span>redirectUri: string) {
 <span class="cstat-no" title="statement not covered" >  browser.runtime.onMessage.addListener(<span class="fstat-no" title="function not covered" >() =</span>&gt; {</span>
-<span class="cstat-no" title="statement not covered" >    return Promise.resolve("ack");</span>
+<span class="cstat-no" title="statement not covered" >    return Promise.resolve('ack');</span>
   });
 &nbsp;
-<span class="cstat-no" title="statement not covered" >  console.log(window.location.origin)</span>
+<span class="cstat-no" title="statement not covered" >  console.log(window.location.origin);</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >  if(window.location.origin === redirectUri) {</span>
-    const port = <span class="cstat-no" title="statement not covered" >browser.runtime.connect(undefined, { name: CHILD_PORT_NAME })</span>
+<span class="cstat-no" title="statement not covered" >  if (window.location.origin === redirectUri) {</span>
+    const port = <span class="cstat-no" title="statement not covered" >browser.runtime.connect(undefined, { name: CHILD_PORT_NAME });</span>
 &nbsp;
     const handler = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >async (m</span>essage: any, port: browser.Runtime.Port) =&gt;<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" > {</span></span></span>
-<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if(port.name === CHILD_PORT_NAME) {</span>
-        const { authorizeUrl, domainUrl } = <span class="cstat-no" title="statement not covered" >message</span>
+<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (port.name === CHILD_PORT_NAME) {</span>
+        const { authorizeUrl, domainUrl } = <span class="cstat-no" title="statement not covered" >message;</span>
 &nbsp;
-        const codeResult = <span class="cstat-no" title="statement not covered" >await runIFrame(</span>
-          authorizeUrl,
-          domainUrl,
-          60
-        );
+        const codeResult = <span class="cstat-no" title="statement not covered" >await runIFrame(authorizeUrl, domainUrl, 60);</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >        port.postMessage(codeResult);</span>
       }
-    }
+    };
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    port.onMessage.addListener(handler);</span>
   } else {
 <span class="cstat-no" title="statement not covered" >    browser.runtime.onConnect.addListener(<span class="fstat-no" title="function not covered" >port </span>=&gt; {</span>
-<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if(port.name === PARENT_PORT_NAME) {</span>
+<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (port.name === PARENT_PORT_NAME) {</span>
         const handler = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >() =</span>&gt; {</span>
-          const iframe = <span class="cstat-no" title="statement not covered" >document.createElement("iframe");</span>
+          const iframe = <span class="cstat-no" title="statement not covered" >document.createElement('iframe');</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >          iframe.setAttribute("width", "0");</span>
-<span class="cstat-no" title="statement not covered" >          iframe.setAttribute("height", "0");</span>
-<span class="cstat-no" title="statement not covered" >          iframe.style.display = "none";</span>
+<span class="cstat-no" title="statement not covered" >          iframe.setAttribute('width', '0');</span>
+<span class="cstat-no" title="statement not covered" >          iframe.setAttribute('height', '0');</span>
+<span class="cstat-no" title="statement not covered" >          iframe.style.display = 'none';</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >          document.body.appendChild(iframe);</span>
-<span class="cstat-no" title="statement not covered" >          iframe.setAttribute("src", redirectUri);</span>
+<span class="cstat-no" title="statement not covered" >          iframe.setAttribute('src', redirectUri);</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >          port.onMessage.removeListener(handler);</span>
 <span class="cstat-no" title="statement not covered" >          port.onDisconnect.addListener(<span class="fstat-no" title="function not covered" >() =</span>&gt; {</span>
@@ -380,16 +344,16 @@ const runIFrame = <span class="fstat-no" title="function not covered" >async (</
   timeoutInSeconds: number = <span class="branch-0 cbranch-no" title="branch not covered" >60</span>
 ) =&gt;<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" > {</span></span>
 <span class="cstat-no" title="statement not covered" >  return new Promise&lt;AuthenticationResult&gt;(<span class="fstat-no" title="function not covered" >(r</span>es, rej) =&gt; {</span>
-    const iframe = <span class="cstat-no" title="statement not covered" >window.document.createElement("iframe");</span>
+    const iframe = <span class="cstat-no" title="statement not covered" >window.document.createElement('iframe');</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    iframe.setAttribute("width", "0");</span>
-<span class="cstat-no" title="statement not covered" >    iframe.setAttribute("height", "0");</span>
-<span class="cstat-no" title="statement not covered" >    iframe.style.display = "none";</span>
+<span class="cstat-no" title="statement not covered" >    iframe.setAttribute('width', '0');</span>
+<span class="cstat-no" title="statement not covered" >    iframe.setAttribute('height', '0');</span>
+<span class="cstat-no" title="statement not covered" >    iframe.style.display = 'none';</span>
 &nbsp;
     const removeIframe = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >() =</span>&gt; {</span>
-<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if(window.document.body.contains(iframe)) {</span>
+<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (window.document.body.contains(iframe)) {</span>
 <span class="cstat-no" title="statement not covered" >        window.document.body.removeChild(iframe);</span>
-<span class="cstat-no" title="statement not covered" >        window.removeEventListener("message", iframeEventHandler, false);</span>
+<span class="cstat-no" title="statement not covered" >        window.removeEventListener('message', iframeEventHandler, false);</span>
       }
     };
 &nbsp;
@@ -401,14 +365,14 @@ const runIFrame = <span class="fstat-no" title="function not covered" >async (</
     }, timeoutInSeconds * 1000);
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    iframeEventHandler = <span class="fstat-no" title="function not covered" >function (e</span>: MessageEvent) {</span>
-<span class="cstat-no" title="statement not covered" >      console.log(e)</span>
+<span class="cstat-no" title="statement not covered" >      console.log(e);</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if(e.origin != eventOrigin) <span class="cstat-no" title="statement not covered" >return;</span></span>
-<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if(!e.data || e.data.type !== "authorization_response") <span class="cstat-no" title="statement not covered" >return</span></span>
+<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (e.origin != eventOrigin) <span class="cstat-no" title="statement not covered" >return;</span></span>
+<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (!e.data || e.data.type !== 'authorization_response') <span class="cstat-no" title="statement not covered" >return;</span></span>
 &nbsp;
       const eventSource = <span class="cstat-no" title="statement not covered" >e.source;</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if(eventSource) {</span>
+<span class="cstat-no" title="statement not covered" >      <span class="missing-if-branch" title="if path not taken" >I</span>if (eventSource) {</span>
         (<span class="cstat-no" title="statement not covered" >eventSource as any).close();</span>
       }
 &nbsp;
@@ -417,18 +381,18 @@ const runIFrame = <span class="fstat-no" title="function not covered" >async (</
         : res(e.data.response);
 &nbsp;
 <span class="cstat-no" title="statement not covered" >      clearTimeout(timeoutSetTimeoutId);</span>
-<span class="cstat-no" title="statement not covered" >      window.removeEventListener("message", iframeEventHandler, false);</span>
+<span class="cstat-no" title="statement not covered" >      window.removeEventListener('message', iframeEventHandler, false);</span>
 &nbsp;
       // Delay the removal of the iframe to prevent hanging loading state
       // in Chrome: https://github.com/auth0/auth0-spa-js/issues/240
 <span class="cstat-no" title="statement not covered" >      setTimeout(removeIframe, 2 * 1000);</span>
     };
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    window.addEventListener("message", iframeEventHandler, false);</span>
+<span class="cstat-no" title="statement not covered" >    window.addEventListener('message', iframeEventHandler, false);</span>
 <span class="cstat-no" title="statement not covered" >    window.document.body.appendChild(iframe);</span>
-<span class="cstat-no" title="statement not covered" >    iframe.setAttribute("src", authorizeUrl);</span>
+<span class="cstat-no" title="statement not covered" >    iframe.setAttribute('src', authorizeUrl);</span>
   });
-}
+};
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -436,7 +400,7 @@ const runIFrame = <span class="fstat-no" title="function not covered" >async (</
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at Thu Jan 27 2022 17:58:49 GMT-0500 (Eastern Standard Time)
+                at Thu Jan 27 2022 18:10:29 GMT-0500 (Eastern Standard Time)
             </div>
         <script src="../prettify.js"></script>
         <script>

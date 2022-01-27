@@ -1,5 +1,5 @@
-import { ICache } from "./cache"
-import { verifyIdToken } from "./jwt"
+import { ICache } from './cache';
+import { verifyIdToken } from './jwt';
 
 /**
  * @ignore
@@ -398,17 +398,17 @@ export class User {
 }
 
 export type GetEntryFromCacheOptions = {
-  scope: string
-  audience: string
-  client_id: string
-  getDetailedEntry?: boolean
-}
+  scope: string;
+  audience: string;
+  client_id: string;
+  getDetailedEntry?: boolean;
+};
 
 export interface AuthenticationResult {
-  state: string
-  code?: string
-  error?: string
-  error_description?: string
+  state: string;
+  code?: string;
+  error?: string;
+  error_description?: string;
 }
 
 export interface TokenEndpointOptions {
@@ -426,7 +426,7 @@ export type TokenEndpointResponse = {
   refresh_token: string;
   expires_in: number;
   scope?: string;
-}
+};
 
 export interface OAuthTokenOptions extends TokenEndpointOptions {
   code_verifier: string;
@@ -441,7 +441,7 @@ export type GetTokenSilentlyResult = TokenEndpointResponse & {
   scope: string;
   oauthTokenScope: string;
   audience: string;
-}
+};
 
 export type FetchOptions = {
   method?: string;
@@ -449,9 +449,9 @@ export type FetchOptions = {
   credentials?: 'include' | 'omit';
   body?: string;
   signal?: AbortSignal;
-}
+};
 
 export type GetTokenSilentlyVerboseResult = Omit<
   TokenEndpointResponse,
-  "refresh_token"
->
+  'refresh_token'
+>;

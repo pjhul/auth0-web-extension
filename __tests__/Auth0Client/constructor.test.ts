@@ -9,9 +9,9 @@ import * as scope from '../../src/scope';
 // @ts-ignore
 window.chrome = {
   runtime: {
-    id: "testid"
-  }
-}
+    id: 'testid',
+  },
+};
 
 // @ts-ignore
 
@@ -30,7 +30,7 @@ const mockVerify = <jest.Mock>verifyIdToken;
 const mockCache: ICache = {
   set: jest.fn().mockResolvedValue(null),
   get: jest.fn().mockResolvedValue(null),
-  remove: jest.fn().mockResolvedValue(null)
+  remove: jest.fn().mockResolvedValue(null),
 };
 
 jest
@@ -51,8 +51,8 @@ describe('Auth0Client', () => {
         ...Object.getOwnPropertyDescriptors(oldWindowLocation),
         assign: {
           configurable: true,
-          value: jest.fn()
-        }
+          value: jest.fn(),
+        },
       }
     ) as Location;
     // --
@@ -61,11 +61,11 @@ describe('Auth0Client', () => {
     mockWindow.addEventListener = jest.fn();
     mockWindow.crypto = {
       subtle: {
-        digest: () => 'foo'
+        digest: () => 'foo',
       },
       getRandomValues() {
         return '123';
-      }
+      },
     };
     mockWindow.MessageChannel = MessageChannel;
     mockWindow.Worker = {};
@@ -83,8 +83,8 @@ describe('Auth0Client', () => {
     it('ensures the openid scope is defined when customizing default scopes', () => {
       const auth0 = setup({
         advancedOptions: {
-          defaultScope: 'test-scope'
-        }
+          defaultScope: 'test-scope',
+        },
       });
 
       expect((<any>auth0).defaultScope).toBe('openid test-scope');
@@ -93,8 +93,8 @@ describe('Auth0Client', () => {
     it('allows an empty custom default scope', () => {
       const auth0 = setup({
         advancedOptions: {
-          defaultScope: null
-        }
+          defaultScope: null,
+        },
       });
 
       expect((<any>auth0).defaultScope).toBe('openid');
@@ -102,7 +102,7 @@ describe('Auth0Client', () => {
 
     it('should create issuer from domain', () => {
       const auth0 = setup({
-        domain: 'test.dev'
+        domain: 'test.dev',
       });
 
       expect((<any>auth0).tokenIssuer).toEqual('https://test.dev/');
@@ -110,7 +110,7 @@ describe('Auth0Client', () => {
 
     it('should allow issuer as a domain', () => {
       const auth0 = setup({
-        issuer: 'foo.bar.com'
+        issuer: 'foo.bar.com',
       });
 
       expect((<any>auth0).tokenIssuer).toEqual('https://foo.bar.com/');
@@ -118,7 +118,7 @@ describe('Auth0Client', () => {
 
     it('should allow issuer as a fully qualified url', () => {
       const auth0 = setup({
-        issuer: 'https://some.issuer.com/'
+        issuer: 'https://some.issuer.com/',
       });
 
       expect((<any>auth0).tokenIssuer).toEqual('https://some.issuer.com/');
@@ -126,7 +126,7 @@ describe('Auth0Client', () => {
 
     it('should allow specifying domain with http scheme', () => {
       const auth0 = setup({
-        domain: 'http://localhost'
+        domain: 'http://localhost',
       });
 
       expect((<any>auth0).domainUrl).toEqual('http://localhost');
@@ -134,7 +134,7 @@ describe('Auth0Client', () => {
 
     it('should allow specifying domain with https scheme', () => {
       const auth0 = setup({
-        domain: 'https://localhost'
+        domain: 'https://localhost',
       });
 
       expect((<any>auth0).domainUrl).toEqual('https://localhost');

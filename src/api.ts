@@ -1,17 +1,15 @@
-import { TokenEndpointOptions, TokenEndpointResponse } from './global'
-import { fetchJSON } from './http'
-import { createQueryParams } from './utils'
+import { TokenEndpointOptions, TokenEndpointResponse } from './global';
+import { fetchJSON } from './http';
+import { createQueryParams } from './utils';
 
-export async function oauthToken(
-  {
-    baseUrl,
-    timeout,
-    audience,
-    scope,
-    useFormData,
-    ...options
-  }: TokenEndpointOptions,
-) {
+export async function oauthToken({
+  baseUrl,
+  timeout,
+  audience,
+  scope,
+  useFormData,
+  ...options
+}: TokenEndpointOptions) {
   const body = useFormData
     ? createQueryParams(options)
     : JSON.stringify(options);
@@ -25,8 +23,8 @@ export async function oauthToken(
         'Content-Type': useFormData
           ? 'application/x-www-form-urlencoded'
           : 'application/json',
-      }
+      },
     },
-    timeout,
+    timeout
   );
 }

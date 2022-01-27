@@ -11,7 +11,7 @@ import {
   urlDecodeB64,
   getCrypto,
   getCryptoSubtle,
-  validateCrypto
+  validateCrypto,
 } from '../src/utils';
 
 (<any>global).TextEncoder = TextEncoder;
@@ -28,7 +28,7 @@ describe('utils', () => {
           id: 1,
           value: 'test',
           url: 'http://example.com',
-          nope: undefined
+          nope: undefined,
         })
       ).toBe('id=1&value=test&url=http%3A%2F%2Fexample.com');
     });
@@ -93,29 +93,27 @@ describe('utils', () => {
 
   describe('createRandomString', () => {
     it('creates random string of specified length', () => {
-      expect(createRandomString(15)).toHaveLength(15)
+      expect(createRandomString(15)).toHaveLength(15);
     });
   });
 
   describe('createSecureRandomString', () => {
     it('creates random string based on crypto.getRandomValues', () => {
       (<any>global).crypto = {
-        getRandomValues: () => [1, 5, 10, 15, 100]
+        getRandomValues: () => [1, 5, 10, 15, 100],
       };
       expect(createSecureRandomString()).toBe('15AFY');
     });
 
     it('creates random string with a length between 43 and 128', () => {
       (<any>global).crypto = {
-        getRandomValues: (a: Uint8Array) => Array(a.length).fill(0)
+        getRandomValues: (a: Uint8Array) => Array(a.length).fill(0),
       };
       const result = createSecureRandomString();
       expect(result.length).toBeGreaterThanOrEqual(43);
       expect(result.length).toBeLessThanOrEqual(128);
     });
   });
-
-
 
   describe('encode', () => {
     it('encodes state', () => {
@@ -137,8 +135,8 @@ describe('utils', () => {
             expect(alg).toMatchObject({ name: 'SHA-256' });
             expect(Array.from(encoded)).toMatchObject([116, 101, 115, 116]);
             return new Promise(res => res(true));
-          })
-        }
+          }),
+        },
       };
       const result = await sha256('test');
       expect(result).toBe(true);
@@ -147,15 +145,15 @@ describe('utils', () => {
       (<any>global).msCrypto = {};
 
       const digestResult = {
-        oncomplete: null
+        oncomplete: null,
       };
 
       (<any>global).crypto = {
         subtle: {
           digest: jest.fn(() => {
             return digestResult;
-          })
-        }
+          }),
+        },
       };
 
       const sha = sha256('test').then(r => {
@@ -170,15 +168,15 @@ describe('utils', () => {
       (<any>global).msCrypto = {};
 
       const digestResult = {
-        onerror: null
+        onerror: null,
       };
 
       (<any>global).crypto = {
         subtle: {
           digest: jest.fn(() => {
             return digestResult;
-          })
-        }
+          }),
+        },
       };
 
       const sha = sha256('test').catch(e => {
@@ -194,15 +192,15 @@ describe('utils', () => {
       (<any>global).msCrypto = {};
 
       const digestResult = {
-        onabort: null
+        onabort: null,
       };
 
       (<any>global).crypto = {
         subtle: {
           digest: jest.fn(() => {
             return digestResult;
-          })
-        }
+          }),
+        },
       };
 
       const sha = sha256('test').catch(e => {

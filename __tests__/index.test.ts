@@ -5,9 +5,9 @@ import * as scope from '../src/scope';
 // @ts-ignore
 window.chrome = {
   runtime: {
-    id: "testid"
-  }
-}
+    id: 'testid',
+  },
+};
 
 jest.mock('../src/jwt');
 jest.mock('../src/utils');
@@ -26,7 +26,7 @@ import {
   TEST_ID_TOKEN,
   TEST_QUERY_PARAMS,
   TEST_RANDOM_STRING,
-  TEST_USER_ID
+  TEST_USER_ID,
 } from './constants';
 
 const setup = async (
@@ -46,23 +46,23 @@ const setup = async (
   api.oauthToken.mockReturnValue(
     Promise.resolve({
       id_token: TEST_ID_TOKEN,
-      access_token: TEST_ACCESS_TOKEN
+      access_token: TEST_ACCESS_TOKEN,
     })
   );
 
   tokenVerifier.mockReturnValue({
     user: {
-      sub: TEST_USER_ID
+      sub: TEST_USER_ID,
     },
     claims: {
       sub: TEST_USER_ID,
-      aud: TEST_CLIENT_ID
-    }
+      aud: TEST_CLIENT_ID,
+    },
   });
 
   const popup = {
     location: { href: '' },
-    close: jest.fn()
+    close: jest.fn(),
   };
 
   const auth0 = callConstructor
@@ -70,7 +70,7 @@ const setup = async (
         domain: TEST_DOMAIN,
         client_id: TEST_CLIENT_ID,
         redirect_uri: TEST_REDIRECT_URI,
-        ...clientOptions
+        ...clientOptions,
       })
     : undefined;
 
@@ -79,7 +79,7 @@ const setup = async (
     tokenVerifier,
     utils,
     popup,
-    api
+    api,
   };
 };
 
@@ -96,8 +96,8 @@ describe('Auth0', () => {
         ...Object.getOwnPropertyDescriptors(oldWindowLocation),
         assign: {
           configurable: true,
-          value: jest.fn()
-        }
+          value: jest.fn(),
+        },
       }
     ) as Location;
     // --
@@ -106,8 +106,8 @@ describe('Auth0', () => {
 
     (<any>global).crypto = {
       subtle: {
-        digest: () => ''
-      }
+        digest: () => '',
+      },
     };
 
     getUniqueScopesSpy = jest.spyOn(scope, 'getUniqueScopes');
@@ -141,7 +141,7 @@ describe('Auth0', () => {
         createAuth0Client({
           domain: TEST_DOMAIN,
           client_id: TEST_CLIENT_ID,
-          cacheLocation: 'dummy'
+          cacheLocation: 'dummy',
         } as any)
       ).toThrow(new Error(`Invalid cache location "dummy"`));
     });

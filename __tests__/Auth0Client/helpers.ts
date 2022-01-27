@@ -15,12 +15,12 @@ import {
   TEST_ID_TOKEN,
   TEST_REDIRECT_URI,
   TEST_REFRESH_TOKEN,
-  TEST_STATE
+  TEST_STATE,
 } from '../constants';
 
 const authorizationResponse: AuthenticationResult = {
   code: 'my_code',
-  state: TEST_STATE
+  state: TEST_STATE,
 };
 
 /**
@@ -62,7 +62,7 @@ export const assertUrlEquals = (
   if (strict) {
     expect(searchParamsObj).toStrictEqual({
       auth0Client: expect.any(String),
-      ...queryParams
+      ...queryParams,
     });
   } else {
     expect(searchParamsObj).toMatchObject(queryParams);
@@ -72,7 +72,7 @@ export const assertUrlEquals = (
 export const fetchResponse = (ok, json) =>
   Promise.resolve({
     ok,
-    json: () => Promise.resolve(json)
+    json: () => Promise.resolve(json),
   });
 
 export const setupFn = (mockVerify: jest.Mock) => {
@@ -82,7 +82,7 @@ export const setupFn = (mockVerify: jest.Mock) => {
         {
           domain: TEST_DOMAIN,
           client_id: TEST_CLIENT_ID,
-          redirect_uri: TEST_REDIRECT_URI
+          redirect_uri: TEST_REDIRECT_URI,
         },
         config
       )
@@ -91,13 +91,13 @@ export const setupFn = (mockVerify: jest.Mock) => {
     mockVerify.mockReturnValue({
       claims: Object.assign(
         {
-          exp: Date.now() / 1000 + 86400
+          exp: Date.now() / 1000 + 86400,
         },
         claims
       ),
       user: {
-        sub: 'me'
-      }
+        sub: 'me',
+      },
     });
 
     return auth0;
@@ -107,47 +107,47 @@ export const setupFn = (mockVerify: jest.Mock) => {
 const processDefaultLoginWithRedirectOptions = config => {
   const defaultTokenResponseOptions = {
     success: true,
-    response: {}
+    response: {},
   };
   const defaultAuthorizeResponseOptions = {
     code: TEST_CODE,
-    state: TEST_STATE
+    state: TEST_STATE,
   };
   const token = {
     ...defaultTokenResponseOptions,
-    ...(config.token || {})
+    ...(config.token || {}),
   };
   const authorize = {
     ...defaultAuthorizeResponseOptions,
-    ...(config.authorize || {})
+    ...(config.authorize || {}),
   };
 
   return {
     token,
     authorize,
     useHash: config.useHash,
-    customCallbackUrl: config.customCallbackUrl
+    customCallbackUrl: config.customCallbackUrl,
   };
 };
 
 const processDefaultLoginWithPopupOptions = config => {
   const defaultTokenResponseOptions = {
     success: true,
-    response: {}
+    response: {},
   };
 
   const defaultAuthorizeResponseOptions = {
-    response: authorizationResponse
+    response: authorizationResponse,
   };
 
   const token = {
     ...defaultTokenResponseOptions,
-    ...(config.token || {})
+    ...(config.token || {}),
   };
 
   const authorize = {
     ...defaultAuthorizeResponseOptions,
-    ...(config.authorize || {})
+    ...(config.authorize || {}),
   };
 
   const delay = config.delay || 0;
@@ -155,7 +155,7 @@ const processDefaultLoginWithPopupOptions = config => {
   return {
     token,
     authorize,
-    delay
+    delay,
   };
 };
 
@@ -170,8 +170,8 @@ export const setupMessageEventLister = (
         cb({
           data: {
             type: 'authorization_response',
-            response
-          }
+            response,
+          },
         });
       }, delay);
     }
@@ -180,8 +180,8 @@ export const setupMessageEventLister = (
   mockWindow.open.mockReturnValue({
     close: () => {},
     location: {
-      href: ''
-    }
+      href: '',
+    },
   });
 };
 
@@ -192,7 +192,7 @@ export const checkSessionFn = mockFetch => {
         id_token: TEST_ID_TOKEN,
         refresh_token: TEST_REFRESH_TOKEN,
         access_token: TEST_ACCESS_TOKEN,
-        expires_in: 86400
+        expires_in: 86400,
       })
     );
     await auth0.checkSession();
@@ -202,15 +202,15 @@ export const checkSessionFn = mockFetch => {
 const processDefaultGetTokenSilentlyOptions = config => {
   const defaultTokenResponseOptions = {
     success: true,
-    response: {}
+    response: {},
   };
   const token = {
     ...defaultTokenResponseOptions,
-    ...(config.token || {})
+    ...(config.token || {}),
   };
 
   return {
-    token
+    token,
   };
 };
 
@@ -224,7 +224,7 @@ export const getTokenSilentlyFn = (mockWindow, mockFetch) => {
         response?: any;
       };
     } = {
-      token: {}
+      token: {},
     }
   ) => {
     const { token } = processDefaultGetTokenSilentlyOptions(testConfig);
@@ -237,7 +237,7 @@ export const getTokenSilentlyFn = (mockWindow, mockFetch) => {
             id_token: TEST_ID_TOKEN,
             refresh_token: TEST_REFRESH_TOKEN,
             access_token: TEST_ACCESS_TOKEN,
-            expires_in: 86400
+            expires_in: 86400,
           },
           token.response
         )

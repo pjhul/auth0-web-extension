@@ -14,7 +14,7 @@ export class GenericError extends Error {
 
   static fromPayload({
     error,
-    error_description
+    error_description,
   }: {
     error: string;
     error_description: string;

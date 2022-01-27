@@ -12,7 +12,7 @@ const verifyOptions = {
   iss: 'https://brucke.auth0.com/',
   aud: 'k5u3o2fiAA8XweXEEX604KCwCjzjtMU6',
   nonce: 'omcw.ptjx3~.8VBm3OuMziLdn5PB0uXG',
-  client_id: 'the_client_id'
+  client_id: 'the_client_id',
 };
 
 const createCertificate = (): Promise<Certificate> =>
@@ -28,7 +28,7 @@ const createCertificate = (): Promise<Certificate> =>
         res({
           serviceKey: keys.serviceKey,
           certificate: keys.certificate,
-          publicKey: p.publicKey
+          publicKey: p.publicKey,
         });
       });
     });
@@ -38,7 +38,7 @@ const DEFAULT_PAYLOAD = <any>{
   sub: 'id|123',
   payload: true,
   nonce: verifyOptions.nonce,
-  azp: verifyOptions.aud
+  azp: verifyOptions.aud,
 };
 const createJWT = async (payload = DEFAULT_PAYLOAD, options = {}) => {
   const cert = await createCertificate();
@@ -48,13 +48,13 @@ const createJWT = async (payload = DEFAULT_PAYLOAD, options = {}) => {
     issuer: verifyOptions.iss,
     expiresIn: '1h',
     keyid: 'NEVBNUNBOTgxRkE5NkQzQzc4OTBEMEFFRDQ5N0Q2Qjk0RkQ1MjFGMQ',
-    ...options
+    ...options,
   });
 };
 
 const verifier = new IDTokenVerifier({
   issuer: verifyOptions.iss,
-  audience: verifyOptions.aud
+  audience: verifyOptions.aud,
 });
 verifier.getRsaVerifier = (_, __, cb) => cb(null, { verify: () => true });
 
@@ -88,19 +88,19 @@ describe('jwt', () => {
         payload:
           'eyJwYXlsb2FkIjp0cnVlLCJpYXQiOjE1NTEzNjIzOTAsImV4cCI6MTU1MTM2NTk5MCwiYXVkIjoiazV1M28yZmlBQThYd2VYRUVYNjA0S0N3Q2p6anRNVTYiLCJpc3MiOiJodHRwczovL2JydWNrZS5hdXRoMC5jb20vIn0',
         signature:
-          'MeU2xC4qwr6JvYeDjCRbzT78mvugpVcSlkoGqRsA-ig-JUHuKMsBO1mNgsilRaxulf_zEl-XktKpq9IisamKSRe1UeboESXsZ02nbZqP5i0X4pdYnTI9Z51Iuet2GAJqPDTMpyj-BA0yiROd1X3Ot91_Fh1ZU7EyZmYdoyJrx_Cue1ituMMIWBk1JOs6rMKy1xVCFoDk20upQzf5Xuy2oGtaRhrQzz5sdRR9Y5yxEN5kzcHrGVaZ_fLMYkUDF_aKv4PTFU-I-0HpP_-4PtcjTUJpeXDK_7BzpA6fAdnqaRTl6iYgNKl7R19_8QfQpoTkeJBmZ7HxW_13s03G5jNLSg'
+          'MeU2xC4qwr6JvYeDjCRbzT78mvugpVcSlkoGqRsA-ig-JUHuKMsBO1mNgsilRaxulf_zEl-XktKpq9IisamKSRe1UeboESXsZ02nbZqP5i0X4pdYnTI9Z51Iuet2GAJqPDTMpyj-BA0yiROd1X3Ot91_Fh1ZU7EyZmYdoyJrx_Cue1ituMMIWBk1JOs6rMKy1xVCFoDk20upQzf5Xuy2oGtaRhrQzz5sdRR9Y5yxEN5kzcHrGVaZ_fLMYkUDF_aKv4PTFU-I-0HpP_-4PtcjTUJpeXDK_7BzpA6fAdnqaRTl6iYgNKl7R19_8QfQpoTkeJBmZ7HxW_13s03G5jNLSg',
       },
       header: { alg: 'RS256', typ: 'JWT' },
       user: {
-        payload: true
+        payload: true,
       },
       claims: {
         __raw: id_token,
         aud: 'k5u3o2fiAA8XweXEEX604KCwCjzjtMU6',
         exp: 1551365990,
         iat: 1551362390,
-        iss: 'https://brucke.auth0.com/'
-      }
+        iss: 'https://brucke.auth0.com/',
+      },
     });
   });
   describe('validates id_token', () => {
@@ -128,7 +128,7 @@ describe('jwt', () => {
 
     const { encoded, header, claims } = verifyIdToken({
       ...verifyOptions,
-      id_token
+      id_token,
     });
 
     expect({ encoded, header, payload: claims }).toMatchObject(
@@ -146,12 +146,12 @@ describe('jwt', () => {
 
   it('verifies correctly with multiple audiences and azp', async () => {
     const id_token = await createJWT(DEFAULT_PAYLOAD, {
-      audience: ['item 1', verifyOptions.aud]
+      audience: ['item 1', verifyOptions.aud],
     });
 
     const { encoded, header, claims } = verifyIdToken({
       ...verifyOptions,
-      id_token
+      id_token,
     });
     expect({ encoded, header, payload: claims }).toMatchObject(
       verifier.decode(id_token)
@@ -166,7 +166,7 @@ describe('jwt', () => {
     const { encoded, header, claims } = verifyIdToken({
       ...verifyOptions,
       id_token,
-      organizationId: org_id
+      organizationId: org_id,
     });
 
     expect({ encoded, header, payload: claims }).toMatchObject(
@@ -182,7 +182,7 @@ describe('jwt', () => {
 
   it('validates algorithm', async () => {
     const id_token = await createJWT(DEFAULT_PAYLOAD, {
-      algorithm: 'HS256'
+      algorithm: 'HS256',
     });
     expect(() => verifyIdToken({ ...verifyOptions, id_token })).toThrow(
       `Signature algorithm of "HS256" is not supported. Expected the ID token to be signed with "RS256".`
@@ -196,7 +196,9 @@ describe('jwt', () => {
   });
   it('validates issuer', async () => {
     const id_token = await createJWT();
-    expect(() => verifyIdToken({ ...verifyOptions, id_token, iss: 'wrong' })).toThrow(
+    expect(() =>
+      verifyIdToken({ ...verifyOptions, id_token, iss: 'wrong' })
+    ).toThrow(
       `Issuer (iss) claim mismatch in the ID token; expected "wrong", found "${verifyOptions.iss}"`
     );
   });
@@ -214,21 +216,25 @@ describe('jwt', () => {
   });
   it('validates audience with `aud` is an array', async () => {
     const id_token = await createJWT(DEFAULT_PAYLOAD, {
-      audience: ['client_id']
+      audience: ['client_id'],
     });
-    expect(() => verifyIdToken({ ...verifyOptions, id_token, aud: 'wrong' })).toThrow(
+    expect(() =>
+      verifyIdToken({ ...verifyOptions, id_token, aud: 'wrong' })
+    ).toThrow(
       `Audience (aud) claim mismatch in the ID token; expected "wrong" but was not one of "client_id"`
     );
   });
   it('validates audience with `aud` is a string', async () => {
     const id_token = await createJWT();
-    expect(() => verifyIdToken({ ...verifyOptions, id_token, aud: 'wrong' })).toThrow(
+    expect(() =>
+      verifyIdToken({ ...verifyOptions, id_token, aud: 'wrong' })
+    ).toThrow(
       `Audience (aud) claim mismatch in the ID token; expected "wrong" but found "${verifyOptions.aud}"`
     );
   });
   it('validates exp', async () => {
     const id_token = await createJWT(DEFAULT_PAYLOAD, {
-      expiresIn: '-1h'
+      expiresIn: '-1h',
     });
     expect(() => verifyIdToken({ ...verifyOptions, id_token })).toThrow(
       `Expiration Time (exp) claim error in the ID token`
@@ -236,15 +242,19 @@ describe('jwt', () => {
   });
   it('validates exp using custom now', async () => {
     const id_token = await createJWT(DEFAULT_PAYLOAD, {
-      expiresIn: '-1h'
+      expiresIn: '-1h',
     });
     expect(() =>
-      verifyIdToken({ ...verifyOptions, id_token, now: Date.now() - 3600 * 1000 })
+      verifyIdToken({
+        ...verifyOptions,
+        id_token,
+        now: Date.now() - 3600 * 1000,
+      })
     ).not.toThrow();
   });
   it('validates nbf', async () => {
     const id_token = await createJWT(DEFAULT_PAYLOAD, {
-      notBefore: '1h'
+      notBefore: '1h',
     });
     expect(() => verifyIdToken({ ...verifyOptions, id_token })).toThrow(
       `Not Before time (nbf) claim in the ID token indicates that this token can't be used just yet.`
@@ -278,7 +288,7 @@ describe('jwt', () => {
   });
   it('does not validate azp is present when `aud` is a string', async () => {
     const id_token = await createJWT(DEFAULT_PAYLOAD, {
-      audience: 'aud'
+      audience: 'aud',
     });
     expect(() =>
       verifyIdToken({ ...verifyOptions, id_token, aud: 'aud' })
@@ -286,7 +296,7 @@ describe('jwt', () => {
   });
   it('does not validate azp is present when `aud` is an array with a single item', async () => {
     const id_token = await createJWT(DEFAULT_PAYLOAD, {
-      audience: ['item 1']
+      audience: ['item 1'],
     });
     expect(() =>
       verifyIdToken({ ...verifyOptions, id_token, aud: 'item 1' })
@@ -296,7 +306,7 @@ describe('jwt', () => {
     const id_token = await createJWT(
       { ...DEFAULT_PAYLOAD, azp: undefined },
       {
-        audience: ['item 1', 'other_value']
+        audience: ['item 1', 'other_value'],
       }
     );
     expect(() =>
@@ -309,7 +319,7 @@ describe('jwt', () => {
     const id_token = await createJWT(
       { ...DEFAULT_PAYLOAD, azp: 'not_the_client_id' },
       {
-        audience: ['item 1', 'other_value']
+        audience: ['item 1', 'other_value'],
       }
     );
     expect(() =>
@@ -321,7 +331,9 @@ describe('jwt', () => {
   it('validate auth_time is present when max_age is provided', async () => {
     const id_token = await createJWT({ ...DEFAULT_PAYLOAD });
 
-    expect(() => verifyIdToken({ ...verifyOptions, id_token, max_age: 123 })).toThrow(
+    expect(() =>
+      verifyIdToken({ ...verifyOptions, id_token, max_age: 123 })
+    ).toThrow(
       'Authentication Time (auth_time) claim must be a number present in the ID token when Max Age (max_age) is specified'
     );
   });
@@ -337,7 +349,7 @@ describe('jwt', () => {
 
     const id_token = await createJWT({
       ...DEFAULT_PAYLOAD,
-      auth_time: authTime
+      auth_time: authTime,
     });
 
     expect(() =>
@@ -359,7 +371,7 @@ describe('jwt', () => {
 
     const id_token = await createJWT({
       ...DEFAULT_PAYLOAD,
-      auth_time: authTime
+      auth_time: authTime,
     });
 
     expect(() =>
@@ -368,7 +380,7 @@ describe('jwt', () => {
         id_token,
         max_age: maxAge,
         leeway,
-        now: Math.floor(yesterday.getTime())
+        now: Math.floor(yesterday.getTime()),
       })
     ).not.toThrow();
   });
@@ -377,7 +389,11 @@ describe('jwt', () => {
     const id_token = await createJWT({ ...DEFAULT_PAYLOAD });
 
     expect(() =>
-      verifyIdToken({ ...verifyOptions, id_token, organizationId: 'test_org_123' })
+      verifyIdToken({
+        ...verifyOptions,
+        id_token,
+        organizationId: 'test_org_123',
+      })
     ).toThrow(
       'Organization ID (org_id) claim must be a string present in the ID token'
     );
@@ -386,11 +402,15 @@ describe('jwt', () => {
   it('validate org_id matches the claim when organizationId is provided', async () => {
     const id_token = await createJWT({
       ...DEFAULT_PAYLOAD,
-      org_id: 'test_org_456'
+      org_id: 'test_org_456',
     });
 
     expect(() =>
-      verifyIdToken({ ...verifyOptions, id_token, organizationId: 'test_org_123' })
+      verifyIdToken({
+        ...verifyOptions,
+        id_token,
+        organizationId: 'test_org_123',
+      })
     ).toThrow(
       'Organization ID (org_id) claim mismatch in the ID token; expected "test_org_123", found "test_org_456"'
     );

@@ -1,14 +1,11 @@
-import {
-  CacheManager,
-  InMemoryCache,
-} from '../../src/cache';
+import { CacheManager, InMemoryCache } from '../../src/cache';
 import { CacheKeyManifest } from '../../src/cache/key-manifest';
 
 import {
   CacheEntry,
   CacheKey,
   CACHE_KEY_PREFIX,
-  ICache
+  ICache,
 } from '../../src/cache/shared';
 
 import {
@@ -19,14 +16,14 @@ import {
   TEST_SCOPES,
   dayInSeconds,
   nowSeconds,
-  TEST_REFRESH_TOKEN
+  TEST_REFRESH_TOKEN,
 } from '../constants';
 import { InMemoryAsyncCacheNoKeys } from './shared';
 
 const defaultKey = new CacheKey({
   client_id: TEST_CLIENT_ID,
   audience: TEST_AUDIENCE,
-  scope: TEST_SCOPES
+  scope: TEST_SCOPES,
 });
 
 const defaultData: CacheEntry = {
@@ -40,10 +37,10 @@ const defaultData: CacheEntry = {
     claims: {
       __raw: TEST_ID_TOKEN,
       exp: nowSeconds() + dayInSeconds,
-      name: 'Test'
+      name: 'Test',
     },
-    user: { name: 'Test' }
-  }
+    user: { name: 'Test' },
+  },
 };
 
 const cacheFactories = [
@@ -53,8 +50,8 @@ const cacheFactories = [
   },*/
   {
     new: () => new InMemoryAsyncCacheNoKeys(),
-    name: 'Async cache using key manifest'
-  }
+    name: 'Async cache using key manifest',
+  },
 ];
 
 cacheFactories.forEach(cacheFactory => {
@@ -100,7 +97,7 @@ cacheFactories.forEach(cacheFactory => {
     it('should return an entry from the cache if any of the scopes match', async () => {
       const data = {
         ...defaultData,
-        scope: 'read:messages write:messages'
+        scope: 'read:messages write:messages',
       };
 
       await manager.set(data);
@@ -108,7 +105,7 @@ cacheFactories.forEach(cacheFactory => {
       const key = new CacheKey({
         client_id: TEST_CLIENT_ID,
         audience: TEST_AUDIENCE,
-        scope: 'read:messages'
+        scope: 'read:messages',
       });
 
       expect(await manager.get(key)).toStrictEqual(data);
@@ -117,7 +114,7 @@ cacheFactories.forEach(cacheFactory => {
     it('should return an entry directly from the cache if the key matches exactly', async () => {
       const data = {
         ...defaultData,
-        scope: 'read:messages write:messages'
+        scope: 'read:messages write:messages',
       };
 
       await manager.set(data);
@@ -125,7 +122,7 @@ cacheFactories.forEach(cacheFactory => {
       const key = new CacheKey({
         client_id: TEST_CLIENT_ID,
         audience: TEST_AUDIENCE,
-        scope: 'read:messages write:messages'
+        scope: 'read:messages write:messages',
       });
 
       expect(await manager.get(key)).toStrictEqual(data);
@@ -150,7 +147,7 @@ cacheFactories.forEach(cacheFactory => {
     it('should not return an entry if not all of the scopes match', async () => {
       const data = {
         ...defaultData,
-        scope: 'read:messages write:messages'
+        scope: 'read:messages write:messages',
       };
 
       await manager.set(data);
@@ -158,7 +155,7 @@ cacheFactories.forEach(cacheFactory => {
       const key = new CacheKey({
         client_id: TEST_CLIENT_ID,
         audience: TEST_AUDIENCE,
-        scope: 'read:messages read:actions'
+        scope: 'read:messages read:actions',
       });
 
       expect(await manager.get(key)).toBeFalsy();
@@ -167,7 +164,7 @@ cacheFactories.forEach(cacheFactory => {
     it('returns undefined from the cache when expires_in < expiryAdjustmentSeconds', async () => {
       const data = {
         ...defaultData,
-        expires_in: 40
+        expires_in: 40,
       };
 
       await manager.set(data);
@@ -177,7 +174,7 @@ cacheFactories.forEach(cacheFactory => {
           new CacheKey({
             client_id: TEST_CLIENT_ID,
             audience: TEST_AUDIENCE,
-            scope: TEST_SCOPES
+            scope: TEST_SCOPES,
           }),
           60
         )
@@ -206,10 +203,10 @@ cacheFactories.forEach(cacheFactory => {
             claims: {
               __raw: TEST_ID_TOKEN,
               name: 'Test',
-              exp: nowSeconds() + dayInSeconds * 2
+              exp: nowSeconds() + dayInSeconds * 2,
             },
-            user: { name: 'Test' }
-          }
+            user: { name: 'Test' },
+          },
         };
 
         await manager.set(data);
@@ -224,7 +221,7 @@ cacheFactories.forEach(cacheFactory => {
         global.Date.now = dateNowStub;
 
         expect(await manager.get(cacheKey)).toStrictEqual({
-          refresh_token: TEST_REFRESH_TOKEN
+          refresh_token: TEST_REFRESH_TOKEN,
         });
 
         global.Date.now = realDateNow;
@@ -234,7 +231,7 @@ cacheFactories.forEach(cacheFactory => {
     it('reads from the cache when expires_in > date.now', async () => {
       const data = {
         ...defaultData,
-        expires_in: 70
+        expires_in: 70,
       };
 
       await manager.set(data);
@@ -254,7 +251,7 @@ cacheFactories.forEach(cacheFactory => {
       const now = Date.now();
       const data = {
         ...defaultData,
-        expires_in: 50
+        expires_in: 50,
       };
       const expiryAdjustmentSeconds = 60;
 
@@ -290,10 +287,10 @@ cacheFactories.forEach(cacheFactory => {
           claims: {
             __raw: TEST_ID_TOKEN,
             name: 'Test',
-            exp: nowSeconds() + dayInSeconds * 2
+            exp: nowSeconds() + dayInSeconds * 2,
           },
-          user: { name: 'Test' }
-        }
+          user: { name: 'Test' },
+        },
       };
 
       await manager.set(data);
@@ -333,10 +330,10 @@ cacheFactories.forEach(cacheFactory => {
           claims: {
             __raw: TEST_ID_TOKEN,
             name: 'Test',
-            exp: nowSeconds() + dayInSeconds * 2
+            exp: nowSeconds() + dayInSeconds * 2,
           },
-          user: { name: 'Test' }
-        }
+          user: { name: 'Test' },
+        },
       };
 
       const provider = jest.fn().mockResolvedValue(now);
@@ -375,10 +372,10 @@ cacheFactories.forEach(cacheFactory => {
           claims: {
             __raw: TEST_ID_TOKEN,
             name: 'Test',
-            exp: nowSeconds() + dayInSeconds * 2
+            exp: nowSeconds() + dayInSeconds * 2,
           },
-          user: { name: 'Test' }
-        }
+          user: { name: 'Test' },
+        },
       };
 
       const provider = jest.fn().mockReturnValue(now);
@@ -414,7 +411,7 @@ cacheFactories.forEach(cacheFactory => {
 
       const data = {
         ...defaultData,
-        expires_in: dayInSeconds * 120
+        expires_in: dayInSeconds * 120,
       };
 
       await manager.set(data);
@@ -449,7 +446,7 @@ cacheFactories.forEach(cacheFactory => {
 
       const data = {
         ...defaultData,
-        expires_in: dayInSeconds * 120
+        expires_in: dayInSeconds * 120,
       };
 
       const provider = jest.fn().mockResolvedValue(now);
@@ -484,7 +481,7 @@ cacheFactories.forEach(cacheFactory => {
 
       const data = {
         ...defaultData,
-        expires_in: dayInSeconds * 120
+        expires_in: dayInSeconds * 120,
       };
 
       const provider = jest.fn().mockReturnValue(now);

@@ -6,22 +6,22 @@ import {
   ICache,
   CacheKey,
   CACHE_KEY_PREFIX,
-  WrappedCacheEntry
+  WrappedCacheEntry,
 } from './shared';
 
 const DEFAULT_EXPIRY_ADJUSTMENT_SECONDS = 0;
 
 export class CacheManager {
-  private keyManifest?: CacheKeyManifest
-  private nowProvider: () => number | Promise<number>
+  private keyManifest?: CacheKeyManifest;
+  private nowProvider: () => number | Promise<number>;
 
   constructor(
     private cache: ICache,
     keyManifest?: CacheKeyManifest | null,
     nowProvider?: () => number | Promise<number>
   ) {
-    if(keyManifest) {
-      this.keyManifest = keyManifest
+    if (keyManifest) {
+      this.keyManifest = keyManifest;
     }
 
     this.nowProvider = nowProvider || DEFAULT_NOW_PROVIDER;
@@ -35,20 +35,20 @@ export class CacheManager {
       cacheKey.toKey()
     );
 
-    if(!wrappedEntry) {
+    if (!wrappedEntry) {
       const keys = await this.getCacheKeys();
 
-      if(!keys) return;
+      if (!keys) return;
 
       const matchedKey = this.matchExistingCacheKey(cacheKey, keys);
 
-      if(!matchedKey) return;
+      if (!matchedKey) return;
 
       wrappedEntry = await this.cache.get<WrappedCacheEntry>(matchedKey);
     }
 
     // If we still don't have an entry, exit.
-    if(!wrappedEntry) {
+    if (!wrappedEntry) {
       return;
     }
 
@@ -58,7 +58,7 @@ export class CacheManager {
     if (wrappedEntry.expiresAt - expiryAdjustmentSeconds < nowSeconds) {
       if (wrappedEntry.body.refresh_token) {
         wrappedEntry.body = {
-          refresh_token: wrappedEntry.body.refresh_token
+          refresh_token: wrappedEntry.body.refresh_token,
         };
 
         await this.cache.set(cacheKey.toKey(), wrappedEntry);
@@ -78,7 +78,7 @@ export class CacheManager {
     const cacheKey = new CacheKey({
       client_id: entry.client_id,
       scope: entry.scope,
-      audience: entry.audience
+      audience: entry.audience,
     });
 
     const wrappedEntry = await this.wrapCacheEntry(entry);
@@ -90,7 +90,7 @@ export class CacheManager {
   async clear(clientId?: string): Promise<void> {
     const keys = await this.getCacheKeys();
 
-    if(!keys) return;
+    if (!keys) return;
 
     await keys
       .filter(key => (clientId ? key.includes(clientId) : true))
@@ -108,7 +108,7 @@ export class CacheManager {
   clearSync(clientId?: string): void {
     const keys = this.cache.allKeys?.() as string[];
 
-    if(!keys) return;
+    if (!keys) return;
 
     keys
       .filter(key => (clientId ? key.includes(clientId) : true))
@@ -123,18 +123,18 @@ export class CacheManager {
 
     const expirySeconds = Math.min(
       expiresInTime,
-      entry.decodedToken.claims.exp || Infinity,
+      entry.decodedToken.claims.exp || Infinity
     );
 
     return {
       body: entry,
-      expiresAt: expirySeconds
+      expiresAt: expirySeconds,
     };
   }
 
   private async getCacheKeys(): Promise<string[]> {
-    if(this.keyManifest) {
-      const { keys } = await this.keyManifest.get() || {};
+    if (this.keyManifest) {
+      const { keys } = (await this.keyManifest.get()) || {};
 
       return keys || [];
     } else {

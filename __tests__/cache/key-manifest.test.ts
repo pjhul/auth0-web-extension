@@ -20,7 +20,7 @@ describe('CacheKeyManifest', () => {
     const key = new CacheKey({
       client_id: TEST_CLIENT_ID,
       audience: TEST_AUDIENCE,
-      scope: TEST_SCOPES
+      scope: TEST_SCOPES,
     });
 
     expect(await manifest.get()).toBeFalsy();
@@ -35,7 +35,7 @@ describe('CacheKeyManifest', () => {
     const key = new CacheKey({
       client_id: TEST_CLIENT_ID,
       audience: TEST_AUDIENCE,
-      scope: TEST_SCOPES
+      scope: TEST_SCOPES,
     });
 
     await manifest.add(key.toKey());
@@ -43,7 +43,7 @@ describe('CacheKeyManifest', () => {
     const key2 = new CacheKey({
       client_id: TEST_CLIENT_ID,
       audience: 'http://another-audience',
-      scope: TEST_SCOPES
+      scope: TEST_SCOPES,
     });
 
     await manifest.add(key2.toKey());
@@ -58,7 +58,7 @@ describe('CacheKeyManifest', () => {
     const key = new CacheKey({
       client_id: TEST_CLIENT_ID,
       audience: TEST_AUDIENCE,
-      scope: TEST_SCOPES
+      scope: TEST_SCOPES,
     });
 
     await manifest.add(key.toKey());
@@ -66,7 +66,7 @@ describe('CacheKeyManifest', () => {
     const key2 = new CacheKey({
       client_id: TEST_CLIENT_ID,
       audience: 'http://another-audience',
-      scope: TEST_SCOPES
+      scope: TEST_SCOPES,
     });
 
     await manifest.add(key2.toKey());
@@ -83,7 +83,7 @@ describe('CacheKeyManifest', () => {
     const key = new CacheKey({
       client_id: TEST_CLIENT_ID,
       audience: TEST_AUDIENCE,
-      scope: TEST_SCOPES
+      scope: TEST_SCOPES,
     });
 
     await manifest.add(key.toKey());
@@ -95,7 +95,7 @@ describe('CacheKeyManifest', () => {
     const key = new CacheKey({
       client_id: TEST_CLIENT_ID,
       audience: TEST_AUDIENCE,
-      scope: TEST_SCOPES
+      scope: TEST_SCOPES,
     });
 
     await expect(manifest.remove(key.toKey())).resolves.toBeFalsy();
@@ -105,13 +105,13 @@ describe('CacheKeyManifest', () => {
     const key = new CacheKey({
       client_id: TEST_CLIENT_ID,
       audience: TEST_AUDIENCE,
-      scope: TEST_SCOPES
+      scope: TEST_SCOPES,
     });
 
     const key2 = new CacheKey({
       client_id: TEST_CLIENT_ID,
       audience: 'http://another-audience',
-      scope: TEST_SCOPES
+      scope: TEST_SCOPES,
     });
 
     await manifest.add(key.toKey());
@@ -124,13 +124,13 @@ describe('CacheKeyManifest', () => {
     const key = new CacheKey({
       client_id: TEST_CLIENT_ID,
       audience: TEST_AUDIENCE,
-      scope: TEST_SCOPES
+      scope: TEST_SCOPES,
     });
 
     const randomKey = new CacheKey({
       client_id: key.client_id,
       audience: 'http://some-other-audience',
-      scope: key.scope
+      scope: key.scope,
     });
 
     await manifest.add(key.toKey());
