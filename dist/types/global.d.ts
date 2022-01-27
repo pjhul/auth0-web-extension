@@ -369,7 +369,6 @@ export interface TokenEndpointOptions {
     client_id: string;
     grant_type: string;
     timeout?: number;
-    auth0Client: any;
     useFormData?: boolean;
     [key: string]: any;
 }

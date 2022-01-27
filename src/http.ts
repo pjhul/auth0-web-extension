@@ -1,3 +1,5 @@
+import fetch from "unfetch";
+
 import {
   DEFAULT_FETCH_TIMEOUT_MS,
   DEFAULT_SILENT_TOKEN_RETRY_COUNT
@@ -18,7 +20,7 @@ const dofetch = async (fetchUrl: string, fetchOptions: FetchOptions) => {
 
 // Removed switch fetch as there's no need to fetch from a worker as we are already in a service worker
 
-const fetchWithTimeout = async (
+export const fetchWithTimeout = async (
   fetchUrl: string,
   fetchOptions: FetchOptions,
   timeout: number = DEFAULT_FETCH_TIMEOUT_MS,

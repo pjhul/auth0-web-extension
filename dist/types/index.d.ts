@@ -1,3 +1,4 @@
+import "fast-text-encoding";
 import { Auth0ClientOptions } from "./global";
 import Auth0Client from "./Auth0Client";
 import "./global";

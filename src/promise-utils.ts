@@ -16,6 +16,9 @@ export const singlePromise = <T>(cb: () => Promise<T>, key: string) => {
   return promise;
 };
 
+// NOTE: This behaviour has been changed compared to auth0-spa-js
+// Instead of retrying until the promise returns 'true', we retry until it dose not reject
+// This is to support functions other than those that just return booleans
 export const retryPromise = async <T>(
   cb: () => Promise<T>,
   maxNumberOfRetries = 3
@@ -25,7 +28,6 @@ export const retryPromise = async <T>(
       const result = await cb();
       return result;
     } catch(error) {
-      console.log(error)
       continue;
     }
   }

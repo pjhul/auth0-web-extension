@@ -12,8 +12,8 @@ import {
 } from "./utils"
 
 import { oauthToken } from "./api"
-
 import { verifyIdToken } from "./jwt"
+import { getUniqueScopes } from "./scope"
 
 import {
   InMemoryCache,
@@ -116,7 +116,9 @@ export default class Auth0Client {
 
     this.defaultScope = getUniqueScopes(
       "openid",
-      this.options?.advancedOptions?.defaultScope || DEFAULT_SCOPE,
+      this.options?.advancedOptions?.defaultScope !== undefined
+        ? this.options.advancedOptions.defaultScope
+        : DEFAULT_SCOPE,
     );
 
     if(this.options.useRefreshTokens) {
@@ -604,12 +606,6 @@ const getTokenIssuer = (issuer: string | undefined, domainUrl: string) => {
   } else {
     return `${domainUrl}/`;
   }
-}
-
-const dedupe = (arr: string[]) => Array.from(new Set(arr));
-
-const getUniqueScopes = (...scopes: (string | undefined)[]) => {
-  return dedupe(scopes.filter(Boolean).join(" ").trim().split(/\s+/)).join(" ")
 }
 
 const getCustomInitialOptions = (
