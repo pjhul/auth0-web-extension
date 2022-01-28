@@ -1,1 +1,3 @@
-export declare function handleTokenRequest(redirectUri: string): void;
+export declare function handleTokenRequest(redirectUri: string, options?: {
+    debug: boolean;
+}): void;

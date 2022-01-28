@@ -62,7 +62,7 @@ export default class Auth0Client {
     getTokenSilently(options?: GetTokenSilentlyOptions): Promise<string>;
     private _getTokenSilently;
     private _getTokenUsingRefreshToken;
-    private _getTokenFromIfFrame;
+    private _getTokenFromIFrame;
     private _getTabId;
     private _verifyIdToken;
     private _getEntryFromCache;

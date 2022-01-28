@@ -29,7 +29,6 @@ export const retryPromise = async <T>(
       const result = await cb();
       return result;
     } catch (error) {
-      console.log('error: ' + error);
       continue;
     }
   }

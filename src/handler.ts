@@ -7,21 +7,37 @@ import { AuthenticationResult } from './global';
 import { TimeoutError, GenericError } from './errors';
 
 // We can probably pull redirectUri from background script at some point
-export function handleTokenRequest(redirectUri: string) {
+export function handleTokenRequest(
+  redirectUri: string,
+  options?: { debug: boolean }
+) {
+  const { debug = false } = options || {};
+
   browser.runtime.onMessage.addListener(() => {
     return Promise.resolve('ack');
   });
 
-  console.log(window.location.origin);
-
   if (window.location.origin === redirectUri) {
+    if (debug)
+      console.log(
+        '[auth0-web-extension] window origin is the same as redirect url, running in iFrame'
+      );
+
     const port = browser.runtime.connect(undefined, { name: CHILD_PORT_NAME });
+
+    if (debug)
+      console.log('[auth0-web-extension] connected to background script');
 
     const handler = async (message: any, port: browser.Runtime.Port) => {
       if (port.name === CHILD_PORT_NAME) {
+        if (debug)
+          console.log(
+            '[auth0-web-extension] received authorizeUrl from background script'
+          );
+
         const { authorizeUrl, domainUrl } = message;
 
-        const codeResult = await runIFrame(authorizeUrl, domainUrl, 60);
+        const codeResult = await runIFrame(authorizeUrl, domainUrl, 60, debug);
 
         port.postMessage(codeResult);
       }
@@ -29,8 +45,16 @@ export function handleTokenRequest(redirectUri: string) {
 
     port.onMessage.addListener(handler);
   } else {
+    if (debug)
+      console.log(
+        '[auth0-web-extension] waiting for background to commence handshake'
+      );
+
     browser.runtime.onConnect.addListener(port => {
       if (port.name === PARENT_PORT_NAME) {
+        if (debug)
+          console.log('[auth0-web-extension] creating iframe of redirect uri');
+
         const handler = () => {
           const iframe = document.createElement('iframe');
 
@@ -43,6 +67,11 @@ export function handleTokenRequest(redirectUri: string) {
 
           port.onMessage.removeListener(handler);
           port.onDisconnect.addListener(() => {
+            if (debug)
+              console.log(
+                '[auth0-web-extension] port disconnected, removing redirect uri iframe'
+              );
+
             window.document.body.removeChild(iframe);
           });
         };
@@ -56,7 +85,8 @@ export function handleTokenRequest(redirectUri: string) {
 const runIFrame = async (
   authorizeUrl: string,
   eventOrigin: string,
-  timeoutInSeconds: number = 60
+  timeoutInSeconds: number = 60,
+  debug: boolean
 ) => {
   return new Promise<AuthenticationResult>((res, rej) => {
     const iframe = window.document.createElement('iframe');
@@ -65,8 +95,13 @@ const runIFrame = async (
     iframe.setAttribute('height', '0');
     iframe.style.display = 'none';
 
+    if (debug) console.log('[auth0-web-extension] created authorize iframe');
+
     const removeIframe = () => {
       if (window.document.body.contains(iframe)) {
+        if (debug)
+          console.log('[auth0-web-extension] removing authorize iframe');
+
         window.document.body.removeChild(iframe);
         window.removeEventListener('message', iframeEventHandler, false);
       }
@@ -80,8 +115,6 @@ const runIFrame = async (
     }, timeoutInSeconds * 1000);
 
     iframeEventHandler = function (e: MessageEvent) {
-      console.log(e);
-
       if (e.origin != eventOrigin) return;
       if (!e.data || e.data.type !== 'authorization_response') return;
 
@@ -90,6 +123,11 @@ const runIFrame = async (
       if (eventSource) {
         (eventSource as any).close();
       }
+
+      if (debug)
+        console.log(
+          '[auth0-web-extension] received message from authorize iframe'
+        );
 
       e.data.response.error
         ? rej(GenericError.fromPayload(e.data.response))

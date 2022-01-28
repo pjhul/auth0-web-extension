@@ -199,13 +199,21 @@ export default class Auth0Client {
   public async getUser<TUser extends User>(
     options: GetUserOptions = {}
   ): Promise<TUser | undefined> {
+    if (this.options.debug) console.log('[auth0-web-extension] - getUser');
+
     const audience = options.audience || this.options.audience || 'default';
     const scope = getUniqueScopes(this.defaultScope, this.scope, options.scope);
+
+    if (this.options.debug)
+      console.log('[auth0-web-extension] - checking session');
 
     await this.checkSession({
       audience,
       scope,
     });
+
+    if (this.options.debug)
+      console.log('[auth0-web-extension] - looking for cached auth token');
 
     const cache = await this.cacheManager.get(
       new CacheKey({
@@ -237,10 +245,16 @@ export default class Auth0Client {
     const audience = options.audience || this.options.audience || 'default';
     const scope = getUniqueScopes(this.defaultScope, this.scope, options.scope);
 
+    if (this.options.debug)
+      console.log('[auth0-web-extension] - checking session');
+
     await this.checkSession({
       audience,
       scope,
     });
+
+    if (this.options.debug)
+      console.log('[auth0-web-extension] - looking for cached auth token');
 
     const cache = await this.cacheManager.get(
       new CacheKey({
@@ -263,6 +277,9 @@ export default class Auth0Client {
    *
    */
   public async isAuthenticated() {
+    if (this.options.debug)
+      console.log('[auth0-web-extension] - isAuthenticated');
+
     const user = await this.getUser();
     return Boolean(user);
   }
@@ -318,9 +335,15 @@ export default class Auth0Client {
   private async _getTokenSilently(
     options: GetTokenSilentlyOptions = {}
   ): Promise<string | GetTokenSilentlyVerboseResult> {
+    if (this.options.debug)
+      console.log('[auth0-web-extension] - getTokenSilently');
+
     const { ignoreCache, ...getTokenOptions } = options;
 
     if (!ignoreCache && getTokenOptions.scope) {
+      if (this.options.debug)
+        console.log('[auth0-web-extension] - checking for cached auth token');
+
       const entry = await this._getEntryFromCache({
         scope: getTokenOptions.scope,
         audience: getTokenOptions.audience || 'default',
@@ -329,9 +352,18 @@ export default class Auth0Client {
       });
 
       if (entry) {
+        if (this.options.debug)
+          console.log('[auth0-web-extension] - cache hit! returning token');
+
         return entry;
       }
+
+      if (this.options.debug)
+        console.log('[auth0-web-extension] - no hit, continuing');
     }
+
+    if (this.options.debug)
+      console.log('[auth0-web-extension] - waiting for lock');
 
     if (
       await retryPromise(
@@ -339,8 +371,16 @@ export default class Auth0Client {
         10
       )
     ) {
+      if (this.options.debug)
+        console.log('[auth0-web-extension] - lock acquired!');
+
       try {
         if (!ignoreCache && getTokenOptions.scope) {
+          if (this.options.debug)
+            console.log(
+              '[auth0-web-extension] - checking cache again to make sure it was not populated while waiting for lock'
+            );
+
           const entry = await this._getEntryFromCache({
             scope: getTokenOptions.scope,
             audience: getTokenOptions.audience || 'default',
@@ -349,13 +389,22 @@ export default class Auth0Client {
           });
 
           if (entry) {
+            if (this.options.debug)
+              console.log('[auth0-web-extension] - cache hit! returning token');
+
             return entry;
           }
+
+          if (this.options.debug)
+            console.log('[auth0-web-extension] - no hit, continuing');
         }
 
         const authResult = this.options.useRefreshTokens
           ? await this._getTokenUsingRefreshToken(getTokenOptions)
-          : await this._getTokenFromIfFrame(getTokenOptions);
+          : await this._getTokenFromIFrame(getTokenOptions);
+
+        if (this.options.debug)
+          console.log('[auth0-web-extension] - storing auth token in cache');
 
         await this.cacheManager.set({
           client_id: this.options.client_id,
@@ -379,6 +428,9 @@ export default class Auth0Client {
         return authResult.access_token;
       } finally {
         await lock.releaseLock(GET_TOKEN_SILENTLY_LOCK_KEY);
+
+        if (this.options.debug)
+          console.log('[auth0-web-extension] - lock released');
       }
     } else {
       throw new TimeoutError();
@@ -391,7 +443,7 @@ export default class Auth0Client {
     throw "We currently don't support using refresh tokens, set useRefreshTokens to false";
   }
 
-  private async _getTokenFromIfFrame(
+  private async _getTokenFromIFrame(
     options: GetTokenSilentlyOptions
   ): Promise<GetTokenSilentlyResult> {
     const stateIn = encode(createSecureRandomString());
@@ -399,6 +451,9 @@ export default class Auth0Client {
     const code_verifier = createSecureRandomString();
     const code_challengeBuffer = await sha256(code_verifier);
     const code_challenge = bufferToBase64UrlEncoded(code_challengeBuffer);
+
+    if (this.options.debug)
+      console.log('[auth0-web-extension] - getTokenFromIFrame');
 
     const params = this._getParams(
       options,
@@ -416,35 +471,49 @@ export default class Auth0Client {
       response_mode: 'web_message',
     });
 
+    if (this.options.debug)
+      console.log('[auth0-web-extension] - built authorize url');
+
     const timeout =
       options.timeoutInSeconds || this.options.authorizeTimeoutInSeconds;
 
     try {
-      console.log('acquiring tab id');
+      if (this.options.debug)
+        console.log(
+          '[auth0-web-extension] - checking if current tab has content script running'
+        );
 
-      const tabId = await retryPromise(this._getTabId, 10);
+      const tabId = await retryPromise<number | null>(
+        this._getTabId.bind(this),
+        10
+      );
 
       if (!tabId) {
         throw 'Failed to connect to tab too many times';
       }
 
-      console.log('content script running on ' + tabId);
+      if (this.options.debug)
+        console.log(
+          `[auth0-web-extension] - content script is running in tab id ${tabId}, connecting`
+        );
 
       const codeResult: AuthenticationResult = await new Promise(resolve => {
-        console.log('connecting to ');
-
         const parentPort = browser.tabs.connect(tabId, {
           name: PARENT_PORT_NAME,
         });
 
+        if (this.options.debug)
+          console.log('[auth0-web-extension] - connected to content script');
+
         const handler = (childPort: browser.Runtime.Port) => {
           if (childPort.name === CHILD_PORT_NAME) {
-            console.log('adding child port listener');
-
             childPort.onMessage.addListener(message => {
               resolve(message);
 
-              console.log('received message from child ' + message);
+              if (this.options.debug)
+                console.log(
+                  `[auth0-web-extension] - received code, closing connections`
+                );
 
               childPort.disconnect();
               parentPort.disconnect();
@@ -452,7 +521,8 @@ export default class Auth0Client {
               browser.runtime.onConnect.removeListener(handler);
             });
 
-            console.log('sending authorize parameters ');
+            if (this.options.debug)
+              console.log(`[auth0-web-extension] - sending authorize url`);
 
             childPort.postMessage({
               authorizeUrl: url,
@@ -462,6 +532,9 @@ export default class Auth0Client {
         };
 
         browser.runtime.onConnect.addListener(handler);
+
+        if (this.options.debug)
+          console.log('[auth0-web-extension] - starting handshake');
 
         parentPort.postMessage({
           redirectUri: params.redirect_uri,
@@ -482,6 +555,9 @@ export default class Auth0Client {
         ...customOptions
       } = options;
 
+      if (this.options.debug)
+        console.log('[auth0-web-extension] - using code to retrieve token');
+
       const tokenResult = await oauthToken({
         ...this.customOptions,
         ...customOptions,
@@ -494,8 +570,10 @@ export default class Auth0Client {
         grant_type: 'authorization_code',
         redirect_uri: params.redirect_uri,
         useFormData: this.options.useFormData,
-        auth0Client: {},
       });
+
+      if (this.options.debug)
+        console.log('[auth0-web-extension] - decoding token');
 
       const decodedToken = await this._verifyIdToken(
         tokenResult.id_token,
@@ -519,22 +597,32 @@ export default class Auth0Client {
   }
 
   private async _getTabId(): Promise<number | null> {
-    const queryOptions = { active: true, currentWindow: true };
-    let [currentTab] = await browser.tabs.query(queryOptions);
+    try {
+      const queryOptions = { active: true, currentWindow: true };
+      let [currentTab] = await browser.tabs.query(queryOptions);
 
-    console.log('currentTab ' + currentTab);
+      const { id } = currentTab || {};
 
-    const { id } = currentTab || {};
+      if (this.options.debug)
+        console.log(`[auth0-web-extension] - current tab id ${id}`);
 
-    if (id) {
-      // This will throw if there is not a content script running
-      const resp = await browser.tabs.sendMessage(id, '');
+      if (id) {
+        // This will throw if there is not a content script running
+        const resp = await browser.tabs.sendMessage(id, '');
 
-      console.log(resp);
+        if (this.options.debug)
+          console.log(
+            `[auth0-web-extension] - received response from current tab`
+          );
 
-      if (resp === 'ack') {
-        return id;
+        if (resp === 'ack') {
+          return id;
+        }
       }
+    } catch (error) {
+      if (this.options.debug) console.log(`[auth0-web-extension] - ${error}`);
+
+      throw error;
     }
 
     throw 'Could not access current tab.';
