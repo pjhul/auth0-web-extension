@@ -56,7 +56,6 @@
   },
   "dependencies": {
     "fast-text-encoding": "^1.0.3",
-    "unfetch": "^4.2.0",
     "webextension-polyfill": "^0.8.0"
   }
 }
