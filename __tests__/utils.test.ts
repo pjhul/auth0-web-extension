@@ -141,7 +141,7 @@ describe('utils', () => {
       const result = await sha256('test');
       expect(result).toBe(true);
     });
-    it('handles ie11 digest.result scenario', () => {
+    /*it('handles ie11 digest.result scenario', () => {
       (<any>global).msCrypto = {};
 
       const digestResult = {
@@ -210,7 +210,7 @@ describe('utils', () => {
       digestResult.onabort?.();
 
       return sha;
-    });
+    });*/
   });
   describe('bufferToBase64UrlEncoded ', () => {
     it('generates correct base64 encoded value from a buffer', async () => {

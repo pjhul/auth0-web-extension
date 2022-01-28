@@ -62,7 +62,7 @@ export const sha256 = async (s: string) => {
   // As a result, the various events need to be handled in the event that we"re
   // working in IE11 (hence the msCrypto check). These events just call resolve
   // or reject depending on their intention.
-  if (window && (window as any)?.msCrypto) {
+  if (false /*window && (window as any)?.msCrypto*/) {
     return new Promise((res, rej) => {
       digestOp.oncomplete = (e: any) => {
         res(e.target.result);
