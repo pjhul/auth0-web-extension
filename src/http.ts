@@ -1,4 +1,4 @@
-import fetch from 'unfetch';
+// import fetch from 'unfetch';
 
 import {
   DEFAULT_FETCH_TIMEOUT_MS,
