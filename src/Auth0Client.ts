@@ -420,27 +420,39 @@ export default class Auth0Client {
       options.timeoutInSeconds || this.options.authorizeTimeoutInSeconds;
 
     try {
+      console.log('acquiring tab id');
+
       const tabId = await retryPromise(this._getTabId, 10);
 
       if (!tabId) {
         throw 'Failed to connect to tab too many times';
       }
 
+      console.log('content script running on ' + tabId);
+
       const codeResult: AuthenticationResult = await new Promise(resolve => {
+        console.log('connecting to ');
+
         const parentPort = browser.tabs.connect(tabId, {
           name: PARENT_PORT_NAME,
         });
 
         const handler = (childPort: browser.Runtime.Port) => {
           if (childPort.name === CHILD_PORT_NAME) {
+            console.log('adding child port listener');
+
             childPort.onMessage.addListener(message => {
               resolve(message);
+
+              console.log('received message from child ' + message);
 
               childPort.disconnect();
               parentPort.disconnect();
 
               browser.runtime.onConnect.removeListener(handler);
             });
+
+            console.log('sending authorize parameters ');
 
             childPort.postMessage({
               authorizeUrl: url,
@@ -510,11 +522,15 @@ export default class Auth0Client {
     const queryOptions = { active: true, currentWindow: true };
     let [currentTab] = await browser.tabs.query(queryOptions);
 
+    console.log('currentTab ' + currentTab);
+
     const { id } = currentTab || {};
 
     if (id) {
       // This will throw if there is not a content script running
       const resp = await browser.tabs.sendMessage(id, '');
+
+      console.log(resp);
 
       if (resp === 'ack') {
         return id;

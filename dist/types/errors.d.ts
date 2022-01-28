@@ -9,7 +9,7 @@ export declare class GenericError extends Error {
     error: string;
     error_description: string;
     constructor(error: string, error_description: string);
-    static fromPayload({ error, error_description }: {
+    static fromPayload({ error, error_description, }: {
         error: string;
         error_description: string;
     }): GenericError;

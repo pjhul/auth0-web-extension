@@ -1,4 +1,4 @@
-import { Auth0ClientOptions, CacheLocation, GetTokenSilentlyOptions, GetTokenSilentlyVerboseResult, User, GetUserOptions, IdToken, GetIdTokenClaimsOptions } from "./global";
+import { Auth0ClientOptions, CacheLocation, GetTokenSilentlyOptions, GetTokenSilentlyVerboseResult, User, GetUserOptions, IdToken, GetIdTokenClaimsOptions } from './global';
 /**
  * Auth0 SDK for Background Scripts in a Web Extension
  */

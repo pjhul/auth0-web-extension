@@ -1,4 +1,4 @@
-import { ICache } from "./shared";
+import { ICache } from './shared';
 export declare class InMemoryCache {
     enclosedCache: ICache;
 }

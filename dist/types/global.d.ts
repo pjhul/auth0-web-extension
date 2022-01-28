@@ -1,5 +1,5 @@
-import { ICache } from "./cache";
-import { verifyIdToken } from "./jwt";
+import { ICache } from './cache';
+import { verifyIdToken } from './jwt';
 /**
  * @ignore
  */
@@ -399,5 +399,5 @@ export declare type FetchOptions = {
     body?: string;
     signal?: AbortSignal;
 };
-export declare type GetTokenSilentlyVerboseResult = Omit<TokenEndpointResponse, "refresh_token">;
+export declare type GetTokenSilentlyVerboseResult = Omit<TokenEndpointResponse, 'refresh_token'>;
 export {};

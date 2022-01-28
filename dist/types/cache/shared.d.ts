@@ -1,4 +1,4 @@
-import { IdToken, User } from "../global";
+import { IdToken, User } from '../global';
 export declare const CACHE_KEY_PREFIX = "@@auth0webext@@";
 export declare type CacheKeyData = {
     audience: string;
