@@ -1,5 +1,3 @@
-// import fetch from 'unfetch';
-
 import {
   DEFAULT_FETCH_TIMEOUT_MS,
   DEFAULT_SILENT_TOKEN_RETRY_COUNT,

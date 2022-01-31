@@ -1,5 +1,4 @@
 import 'fast-text-encoding';
-import unfetch from 'unfetch';
 import { verifyIdToken } from '../../src/jwt';
 import { MessageChannel } from 'worker_threads';
 import * as utils from '../../src/utils';
@@ -12,11 +11,11 @@ import { assertUrlEquals, loginWithRedirectFn, setupFn } from './helpers';
 import { TEST_CLIENT_ID, TEST_CODE_CHALLENGE, TEST_DOMAIN } from '../constants';
 import { ICache } from '../../src/cache';
 
-jest.mock('unfetch');
 jest.mock('../../src/jwt');
 
 const mockWindow = <any>global;
-const mockFetch = (mockWindow.fetch = <jest.Mock>unfetch);
+mockWindow.fetch = jest.fn();
+const mockFetch = <jest.Mock>mockWindow.fetch;
 const mockVerify = <jest.Mock>verifyIdToken;
 
 const mockCache: ICache = {

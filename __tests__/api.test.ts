@@ -1,17 +1,12 @@
-import fetch from 'unfetch';
-
 import { DEFAULT_SILENT_TOKEN_RETRY_COUNT } from '../src/constants';
 
 import { oauthToken } from '../src/api';
 
 import { MessageChannel } from 'worker_threads';
-(<any>global).MessageChannel = MessageChannel;
 
-jest.mock('unfetch');
-
-const mockFetch = <jest.Mock>fetch;
 (<any>global).MessageChannel = MessageChannel;
-(<any>global).fetch = mockFetch;
+(<any>global).fetch = jest.fn();
+const mockFetch = <jest.Mock>global.fetch;
 
 describe('oauthToken', () => {
   let abortController: AbortController;
