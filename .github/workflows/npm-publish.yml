@@ -1,7 +1,6 @@
 name: Node.js Package Publish
 
 on:
-  workflow_dispatch:
   release:
     types: [created]
 
@@ -20,7 +19,7 @@ jobs:
           yarn test
 
   publish-npm:
-    needs: build
+    needs: test
     environment: production
     runs-on: ubuntu-latest
     permissions:
