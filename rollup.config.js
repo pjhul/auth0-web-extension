@@ -32,6 +32,14 @@ let bundles = [
     },
     plugins: [...getPlugins(isProduction)],
   },
+  {
+    input: 'src/index.ts',
+    output: {
+      file: pkg.main,
+      format: 'cjs',
+    },
+    plugins: [...getPlugins(isProduction)],
+  },
 ];
 
 export default bundles;
