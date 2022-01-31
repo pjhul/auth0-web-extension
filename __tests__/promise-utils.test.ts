@@ -88,4 +88,41 @@ describe('Promise Utils', () => {
       expect(cb).toHaveBeenCalledTimes(5);
     });
   });
+
+  describe('retryPromise', () => {
+    it('does not retry promise when it resolves to true', async () => {
+      const cb = jest.fn().mockResolvedValue(true);
+
+      const value = await retryPromise(cb as any);
+
+      expect(value).toBe(true);
+      expect(cb).toHaveBeenCalledTimes(1);
+    });
+
+    it('retries promise until it resolves to true', async () => {
+      let i = 1;
+      const cb = jest.fn().mockImplementation(() => {
+        if (i === 3) {
+          return Promise.resolve(true);
+        }
+
+        i++;
+        return Promise.resolve(false);
+      });
+
+      const value = await retryPromise(cb as any);
+
+      expect(value).toBe(true);
+      expect(cb).toHaveBeenCalledTimes(3);
+    });
+
+    it('resolves to false when all retries resolve to false', async () => {
+      const cb = jest.fn().mockResolvedValue(false);
+
+      const value = await retryPromise(cb as any, 5);
+
+      expect(value).toBe(false);
+      expect(cb).toHaveBeenCalledTimes(5);
+    });
+  });
 });
