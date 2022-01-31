@@ -6,7 +6,7 @@ on:
     types: [created]
 
 jobs:
-  build:
+  test:
     environment: production
     runs-on: ubuntu-latest
     steps:
@@ -18,7 +18,6 @@ jobs:
           yarn set version berry
           yarn install --immutable
           yarn test
-          yarn build
 
   publish-npm:
     needs: build
@@ -36,7 +35,7 @@ jobs:
           node-version: '16.x'
           registry-url: https://registry.npmjs.org/
           always-auth: true
+      - run: yarn build
       - run: yarn set version berry
-      - run: yarn config set npmRegistryServer https://registry.npmjs.org
       - run: yarn config set npmAuthToken $NPM_TOKEN
       - run: yarn npm publish
