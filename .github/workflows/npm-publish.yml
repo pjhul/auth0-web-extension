@@ -1,6 +1,7 @@
 name: Node.js Package Publish
 
 on:
+  workflow_dispatch:
   release:
     types: [created]
 
@@ -17,6 +18,7 @@ jobs:
           yarn set version berry
           yarn install --immutable
           yarn test
+          yarn build
 
   publish-npm:
     needs: build
