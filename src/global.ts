@@ -274,6 +274,23 @@ export interface RedirectLoginOptions<TAppState = any>
   redirectMethod?: 'replace' | 'assign';
 }
 
+export interface RedirectLoginResult<TAppState = any> {
+  /**
+   * State stored when the redirect request was made
+   */
+  appStat?: TAppState;
+}
+
+export interface PopupLoginOptions extends BaseLoginOptions {}
+
+export interface PopupConfigOptions {
+  /**
+   * The number of seconds to wait for a popup response before
+   * throwing a timeout error. Defaults to 60s
+   */
+  timeoutInSeconds?: number;
+}
+
 export interface GetUserOptions {
   /**
    * The scope that was used in the authentication request

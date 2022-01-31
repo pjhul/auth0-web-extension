@@ -49,6 +49,8 @@ import {
   IdToken,
   GetIdTokenClaimsOptions,
   RedirectLoginOptions,
+  PopupLoginOptions,
+  PopupConfigOptions,
 } from './global';
 
 import { AuthenticationError, TimeoutError } from './errors';
@@ -164,7 +166,23 @@ export default class Auth0Client {
           this._handleAuthorizeResponse(message.payload);
           break;
 
-        case 'auth-params':
+        case 'auth-error': {
+          const transaction = this.transactionManager.get();
+
+          if (transaction) {
+            transaction.errorCallback(message.error);
+          }
+
+          if (sender.tab?.id) {
+            this.messenger.sendTabMessage(sender.tab.id, {
+              type: 'auth-cleanup',
+            });
+          }
+
+          break;
+        }
+
+        case 'auth-params': {
           const transaction = this.transactionManager.get();
 
           if (this.options.debug) {
@@ -179,7 +197,9 @@ export default class Auth0Client {
               domainUrl: transaction.domainUrl,
             };
           }
+
           break;
+        }
 
         default:
           throw new Error(`Invalid message type ${message.type}`);
@@ -357,7 +377,7 @@ export default class Auth0Client {
     ) {
       try {
         const result = await new Promise<GetTokenSilentlyResult>(
-          async resolve => {
+          async (resolve, reject) => {
             this.transactionManager.create({
               authorizeUrl,
               domainUrl: this.domainUrl,
@@ -369,6 +389,7 @@ export default class Auth0Client {
               redirect_uri: params.redirect_uri,
               state: stateIn,
               callback: resolve,
+              errorCallback: reject,
             });
 
             await browser.tabs.create({ url });
@@ -376,6 +397,85 @@ export default class Auth0Client {
         );
 
         return result;
+      } finally {
+        await lock.releaseLock(GET_TOKEN_SILENTLY_LOCK_KEY);
+
+        if (this.options.debug)
+          console.log('[auth0-web-extension] - lock released');
+      }
+    } else {
+      throw new TimeoutError();
+    }
+  }
+
+  public async loginWithPopup(
+    options?: PopupLoginOptions,
+    config?: PopupConfigOptions
+  ) {
+    options = options || {};
+    config = config || {};
+
+    const { ...authorizeOptions } = options;
+    const stateIn = encode(createSecureRandomString());
+    const nonceIn = encode(createSecureRandomString());
+    const codeVerifier = createSecureRandomString();
+    const codeChallengeBuffer = await sha256(codeVerifier);
+    const codeChallenge = bufferToBase64UrlEncoded(codeChallengeBuffer);
+
+    const params = this._getParams(
+      authorizeOptions,
+      stateIn,
+      nonceIn,
+      codeChallenge,
+      this.options.redirect_uri
+    );
+
+    const url = this._authorizeUrl({
+      ...params,
+      response_mode: 'query',
+    });
+
+    const width = 400;
+    const height = 600;
+
+    if (
+      await retryPromise(
+        () => lock.acquireLock(GET_TOKEN_SILENTLY_LOCK_KEY, 5000),
+        10
+      )
+    ) {
+      try {
+        return new Promise<GetTokenSilentlyResult>(async (resolve, reject) => {
+          const popup = await browser.windows.create({
+            width,
+            height,
+            type: 'popup',
+            url,
+          });
+
+          const removeWindow =
+            (func: (...args: any[]) => void) =>
+            (...args: any[]) => {
+              if (popup.id) {
+                browser.windows.remove(popup.id);
+              }
+
+              func(args);
+            };
+
+          this.transactionManager.create({
+            authorizeUrl: url,
+            domainUrl: this.domainUrl,
+            nonce: nonceIn,
+            code_verifier: codeVerifier,
+            scope: params.scope,
+            audience: params.audience || 'default',
+            redirect_uri: params.redirect_uri,
+            state: stateIn,
+            callback: removeWindow(resolve),
+            errorCallback: removeWindow(reject),
+          });
+        });
       } finally {
         await lock.releaseLock(GET_TOKEN_SILENTLY_LOCK_KEY);
 
@@ -542,9 +642,6 @@ export default class Auth0Client {
     const { ignoreCache, ...getTokenOptions } = options;
 
     if (!ignoreCache && getTokenOptions.scope) {
-      if (this.options.debug)
-        console.log('[auth0-web-extension] - checking for cached auth token');
-
       const entry = await this._getEntryFromCache({
         scope: getTokenOptions.scope,
         audience: getTokenOptions.audience || 'default',
@@ -560,7 +657,7 @@ export default class Auth0Client {
       }
 
       if (this.options.debug)
-        console.log('[auth0-web-extension] - no hit, continuing');
+        console.log('[auth0-web-extension] - no cache hit, continuing');
     }
 
     if (this.options.debug)
@@ -577,11 +674,6 @@ export default class Auth0Client {
 
       try {
         if (!ignoreCache && getTokenOptions.scope) {
-          if (this.options.debug)
-            console.log(
-              '[auth0-web-extension] - checking cache again to make sure it was not populated while waiting for lock'
-            );
-
           const entry = await this._getEntryFromCache({
             scope: getTokenOptions.scope,
             audience: getTokenOptions.audience || 'default',
@@ -692,7 +784,7 @@ export default class Auth0Client {
         type: 'auth-start',
       });
 
-      return new Promise<GetTokenSilentlyResult>(resolve => {
+      return new Promise<GetTokenSilentlyResult>((resolve, reject) => {
         this.transactionManager.create({
           authorizeUrl: url,
           domainUrl: this.domainUrl,
@@ -703,6 +795,7 @@ export default class Auth0Client {
           redirect_uri: params.redirect_uri,
           state: stateIn,
           callback: resolve,
+          errorCallback: reject,
         });
       });
     } catch (e) {

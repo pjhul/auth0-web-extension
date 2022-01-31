@@ -30,7 +30,9 @@ export async function handleTokenRequest(
         payload: results,
       });
 
-      window.close();
+      if (window.opener) {
+        window.close();
+      }
     } else {
       const { authorizeUrl, domainUrl } = await messenger.sendRuntimeMessage({
         type: 'auth-params',
@@ -40,16 +42,19 @@ export async function handleTokenRequest(
         console.log('[auth0-web-extension] Creating /authorize url IFrame');
       }
 
-      const codeResult = await runIFrame(authorizeUrl, domainUrl, 60, debug);
+      try {
+        const codeResult = await runIFrame(authorizeUrl, domainUrl, 60, debug);
 
-      if (debug) {
-        console.log('[auth0-web-extension] Returning results');
+        await messenger.sendRuntimeMessage({
+          type: 'auth-result',
+          payload: codeResult,
+        });
+      } catch (error) {
+        await messenger.sendRuntimeMessage({
+          type: 'auth-error',
+          error: error as GenericError,
+        });
       }
-
-      await messenger.sendRuntimeMessage({
-        type: 'auth-result',
-        payload: codeResult,
-      });
     }
   } else {
     let iframe: HTMLIFrameElement;

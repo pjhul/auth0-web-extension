@@ -12,6 +12,7 @@ interface Transaction {
     organizationId?: string;
     state?: string;
     callback: (authResult: GetTokenSilentlyResult) => void;
+    errorCallback: (error: any) => void;
 }
 export default class TransactionManager {
     private storage;

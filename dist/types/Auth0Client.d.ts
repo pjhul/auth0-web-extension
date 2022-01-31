@@ -1,4 +1,4 @@
-import { Auth0ClientOptions, CacheLocation, GetTokenSilentlyOptions, GetTokenSilentlyResult, GetTokenSilentlyVerboseResult, User, GetUserOptions, IdToken, GetIdTokenClaimsOptions, RedirectLoginOptions } from './global';
+import { Auth0ClientOptions, CacheLocation, GetTokenSilentlyOptions, GetTokenSilentlyResult, GetTokenSilentlyVerboseResult, User, GetUserOptions, IdToken, GetIdTokenClaimsOptions, RedirectLoginOptions, PopupLoginOptions, PopupConfigOptions } from './global';
 /**
  * Auth0 SDK for Background Scripts in a Web Extension
  */
@@ -48,6 +48,7 @@ export default class Auth0Client {
      */
     getIdTokenClaims(options?: GetIdTokenClaimsOptions): Promise<IdToken | undefined>;
     loginWithNewTab<TAppState = any>(options?: RedirectLoginOptions<TAppState>): Promise<GetTokenSilentlyResult>;
+    loginWithPopup(options?: PopupLoginOptions, config?: PopupConfigOptions): Promise<GetTokenSilentlyResult>;
     private _handleAuthorizeResponse;
     /**
      * ```js

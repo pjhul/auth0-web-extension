@@ -1,5 +1,7 @@
 import browser from 'webextension-polyfill';
 
+import { GenericError } from './errors';
+
 import { AuthenticationResult } from './global';
 
 export type AuthStartMessage = {
@@ -23,11 +25,17 @@ export type AuthResultMessage = {
   payload: AuthenticationResult;
 };
 
+export type AuthErrorMessage = {
+  type: 'auth-error';
+  error: GenericError;
+};
+
 export type Message =
   | AuthStartMessage
   | AuthParamsMessage
   | AuthCleanUpMessage
   | AuthAckMessage
+  | AuthErrorMessage
   | AuthResultMessage;
 
 export type MessageResponse<M extends Message> = M extends AuthStartMessage
@@ -43,6 +51,8 @@ export type MessageResponse<M extends Message> = M extends AuthStartMessage
   ? void
   : M extends AuthAckMessage
   ? 'ack'
+  : M extends AuthErrorMessage
+  ? void
   : never;
 
 type WrappedMessage = Message & {

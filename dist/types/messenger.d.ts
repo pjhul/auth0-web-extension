@@ -1,4 +1,5 @@
 import browser from 'webextension-polyfill';
+import { GenericError } from './errors';
 import { AuthenticationResult } from './global';
 export declare type AuthStartMessage = {
     type: 'auth-start';
@@ -16,11 +17,15 @@ export declare type AuthResultMessage = {
     type: 'auth-result';
     payload: AuthenticationResult;
 };
-export declare type Message = AuthStartMessage | AuthParamsMessage | AuthCleanUpMessage | AuthAckMessage | AuthResultMessage;
+export declare type AuthErrorMessage = {
+    type: 'auth-error';
+    error: GenericError;
+};
+export declare type Message = AuthStartMessage | AuthParamsMessage | AuthCleanUpMessage | AuthAckMessage | AuthErrorMessage | AuthResultMessage;
 export declare type MessageResponse<M extends Message> = M extends AuthStartMessage ? void : M extends AuthParamsMessage ? {
     authorizeUrl: string;
     domainUrl: string;
-} : M extends AuthCleanUpMessage ? void : M extends AuthResultMessage ? void : M extends AuthAckMessage ? 'ack' : never;
+} : M extends AuthCleanUpMessage ? void : M extends AuthResultMessage ? void : M extends AuthAckMessage ? 'ack' : M extends AuthErrorMessage ? void : never;
 export default class Messenger {
     sendTabMessage<M extends Message>(tabId: number, message: M): Promise<MessageResponse<M>>;
     sendRuntimeMessage<M extends Message>(message: M): Promise<MessageResponse<M>>;
