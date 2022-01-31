@@ -1,5 +1,9 @@
 # auth0-web-extension
 
+**NOTE: This library is still in pre-release and not recommended for production use yet.** I'm actively working on a
+production release, so in the meantime feel free to test this library out and raise any issues/enhacements over on the
+issue tracker.
+
 ## Installation
 
 Using [npm](https://npmjs.org)
