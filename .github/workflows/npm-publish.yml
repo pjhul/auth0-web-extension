@@ -24,6 +24,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
@@ -31,8 +33,7 @@ jobs:
           node-version: '16.x'
           registry-url: https://registry.npmjs.org/
           always-auth: true
-      - run: |
-          yarn config set npmAuthToken $NODE_AUTH_TOKEN
-          yarn npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+      - run: yarn set version berry
+      - run: yarn config set npmRegistryServer https://registry.npmjs.org
+      - run: yarn config set npmAuthToken $NODE_AUTH_TOKEN
+      - run: yarn npm publish

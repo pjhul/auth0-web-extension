@@ -21,6 +21,9 @@
   "bugs": {
     "url": "https://github.com/pjhul/auth0-web-extension/issues"
   },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
   "homepage": "https://github.com/pjhul/auth0-web-extension#readme",
   "files": [
     "src",
