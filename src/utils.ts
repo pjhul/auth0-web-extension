@@ -1,3 +1,27 @@
+import { AuthenticationResult } from './global';
+
+export const parseQueryResult = (queryString: string): AuthenticationResult => {
+  if (queryString.indexOf('#') > -1) {
+    queryString = queryString.slice(0, queryString.indexOf('#'));
+  }
+
+  const queryParams = queryString.split('&');
+  const parsedQuery: Record<string, any> = {};
+
+  queryParams.forEach(qp => {
+    const [key, val] = qp.split('=');
+    if (key && val) {
+      parsedQuery[key] = decodeURIComponent(val);
+    }
+  });
+
+  if (parsedQuery.expires_in) {
+    parsedQuery.expires_in = parseInt(parsedQuery.expires_in);
+  }
+
+  return parsedQuery as AuthenticationResult;
+};
+
 export const getCrypto = () => {
   // FIXME: window is not accessible in background script
   //ie 11.x uses msCrypto

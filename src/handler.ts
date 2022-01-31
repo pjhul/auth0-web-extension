@@ -1,62 +1,67 @@
-import browser from 'webextension-polyfill';
-
-import { PARENT_PORT_NAME, CHILD_PORT_NAME } from './constants';
-
+import { parseQueryResult } from './utils';
 import { AuthenticationResult } from './global';
 
 import { TimeoutError, GenericError } from './errors';
 
+import Messenger from './messenger';
+
 // We can probably pull redirectUri from background script at some point
-export function handleTokenRequest(
+export async function handleTokenRequest(
   redirectUri: string,
   options?: { debug: boolean }
 ) {
+  const messenger = new Messenger();
+
   const { debug = false } = options || {};
 
-  browser.runtime.onMessage.addListener(() => {
-    return Promise.resolve('ack');
-  });
-
   if (window.location.origin === redirectUri) {
-    if (debug)
-      console.log(
-        '[auth0-web-extension] window origin is the same as redirect url, running in iFrame'
-      );
+    if (
+      window.location.search.includes('code=') &&
+      window.location.search.includes('state=')
+    ) {
+      const results = parseQueryResult(window.location.search.slice(1));
 
-    const port = browser.runtime.connect(undefined, { name: CHILD_PORT_NAME });
-
-    if (debug)
-      console.log('[auth0-web-extension] connected to background script');
-
-    const handler = async (message: any, port: browser.Runtime.Port) => {
-      if (port.name === CHILD_PORT_NAME) {
-        if (debug)
-          console.log(
-            '[auth0-web-extension] received authorizeUrl from background script'
-          );
-
-        const { authorizeUrl, domainUrl } = message;
-
-        const codeResult = await runIFrame(authorizeUrl, domainUrl, 60, debug);
-
-        port.postMessage(codeResult);
+      if (debug) {
+        console.log('[auth0-web-extension] Returning results');
       }
-    };
 
-    port.onMessage.addListener(handler);
+      await messenger.sendRuntimeMessage({
+        type: 'auth-result',
+        payload: results,
+      });
+
+      window.close();
+    } else {
+      const { authorizeUrl, domainUrl } = await messenger.sendRuntimeMessage({
+        type: 'auth-params',
+      });
+
+      if (debug) {
+        console.log('[auth0-web-extension] Creating /authorize url IFrame');
+      }
+
+      const codeResult = await runIFrame(authorizeUrl, domainUrl, 60, debug);
+
+      if (debug) {
+        console.log('[auth0-web-extension] Returning results');
+      }
+
+      await messenger.sendRuntimeMessage({
+        type: 'auth-result',
+        payload: codeResult,
+      });
+    }
   } else {
-    if (debug)
-      console.log(
-        '[auth0-web-extension] waiting for background to commence handshake'
-      );
+    let iframe: HTMLIFrameElement;
 
-    browser.runtime.onConnect.addListener(port => {
-      if (port.name === PARENT_PORT_NAME) {
-        if (debug)
-          console.log('[auth0-web-extension] creating iframe of redirect uri');
+    messenger.addMessageListener(message => {
+      switch (message.type) {
+        case 'auth-start':
+          if (debug) {
+            console.log('[auth0-web-extension] Create redirect uri IFrame');
+          }
 
-        const handler = () => {
-          const iframe = document.createElement('iframe');
+          iframe = document.createElement('iframe');
 
           iframe.setAttribute('width', '0');
           iframe.setAttribute('height', '0');
@@ -64,19 +69,23 @@ export function handleTokenRequest(
 
           document.body.appendChild(iframe);
           iframe.setAttribute('src', redirectUri);
+          break;
 
-          port.onMessage.removeListener(handler);
-          port.onDisconnect.addListener(() => {
-            if (debug)
-              console.log(
-                '[auth0-web-extension] port disconnected, removing redirect uri iframe'
-              );
+        case 'auth-cleanup':
+          if (debug) {
+            console.log('[auth0-web-extension] Cleaning up IFrame');
+          }
 
+          if (iframe) {
             window.document.body.removeChild(iframe);
-          });
-        };
+          }
+          break;
 
-        port.onMessage.addListener(handler);
+        case 'auth-ack':
+          return 'ack';
+
+        default:
+          throw new Error(`Unexpected message type ${message.type}`);
       }
     });
   }

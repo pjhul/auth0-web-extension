@@ -11,9 +11,13 @@ import {
   validateCrypto,
 } from './utils';
 
+import Messenger from './messenger';
+import TransactionManager from './transaction-manager';
 import { oauthToken } from './api';
 import { verifyIdToken } from './jwt';
 import { getUniqueScopes } from './scope';
+
+import { InMemoryStorage } from './storage';
 
 import {
   InMemoryCache,
@@ -27,8 +31,6 @@ import {
   DEFAULT_SCOPE,
   DEFAULT_NOW_PROVIDER,
   CACHE_LOCATION_MEMORY,
-  CHILD_PORT_NAME,
-  PARENT_PORT_NAME,
   RECOVERABLE_ERRORS,
 } from './constants';
 
@@ -46,11 +48,17 @@ import {
   GetUserOptions,
   IdToken,
   GetIdTokenClaimsOptions,
+  RedirectLoginOptions,
 } from './global';
 
-import { TimeoutError } from './errors';
+import { AuthenticationError, TimeoutError } from './errors';
 
-import { singlePromise, retryPromise, delay } from './promise-utils';
+import {
+  singlePromise,
+  retryPromise,
+  retryPromiseOnReject,
+  delay,
+} from './promise-utils';
 
 const lock = new Lock();
 
@@ -60,6 +68,8 @@ const GET_TOKEN_SILENTLY_LOCK_KEY = 'auth0.lock.getTokenSilently';
  * Auth0 SDK for Background Scripts in a Web Extension
  */
 export default class Auth0Client {
+  private transactionManager: TransactionManager;
+  private messenger: Messenger;
   private cacheManager: CacheManager;
   private customOptions: BaseLoginOptions;
   private domainUrl: string;
@@ -99,6 +109,15 @@ export default class Auth0Client {
       cache = factory();
     }
 
+    const transactionStorage = new InMemoryStorage();
+
+    this.transactionManager = new TransactionManager(
+      transactionStorage,
+      this.options.client_id
+    );
+
+    this.messenger = new Messenger();
+
     this.scope = this.options.scope;
 
     this.nowProvider = this.options.nowProvider || DEFAULT_NOW_PROVIDER;
@@ -126,6 +145,46 @@ export default class Auth0Client {
     }
 
     this.customOptions = getCustomInitialOptions(options);
+
+    this.messenger.addMessageListener((message, sender) => {
+      switch (message.type) {
+        case 'auth-result':
+          if (sender.tab?.id) {
+            this.messenger.sendTabMessage(sender.tab.id, {
+              type: 'auth-cleanup',
+            });
+          }
+
+          if (this.options.debug) {
+            console.log(
+              '[auth0-web-extension] Received authentication result back, cleaning up...'
+            );
+          }
+
+          this._handleAuthorizeResponse(message.payload);
+          break;
+
+        case 'auth-params':
+          const transaction = this.transactionManager.get();
+
+          if (this.options.debug) {
+            console.log(
+              '[auth0-web-extension] Sending authorize url to content script'
+            );
+          }
+
+          if (transaction) {
+            return {
+              authorizeUrl: transaction.authorizeUrl,
+              domainUrl: transaction.domainUrl,
+            };
+          }
+          break;
+
+        default:
+          throw new Error(`Invalid message type ${message.type}`);
+      }
+    });
   }
 
   private _url(path: string) {
@@ -267,6 +326,148 @@ export default class Auth0Client {
     return cache?.decodedToken?.claims;
   }
 
+  public async loginWithNewTab<TAppState = any>(
+    options: RedirectLoginOptions<TAppState> = {}
+  ) {
+    const { redirect_uri, appState, ...authorizeOptions } = options;
+
+    const stateIn = encode(createSecureRandomString());
+    const nonceIn = encode(createSecureRandomString());
+    const codeVerifier = createSecureRandomString();
+    const codeChallengeBuffer = await sha256(codeVerifier);
+    const codeChallenge = bufferToBase64UrlEncoded(codeChallengeBuffer);
+    const fragment = options.fragment ? `#${options.fragment}` : '';
+
+    const params = this._getParams(
+      authorizeOptions,
+      stateIn,
+      nonceIn,
+      codeChallenge,
+      redirect_uri
+    );
+
+    const url = this._authorizeUrl(params);
+    const authorizeUrl = url + fragment;
+
+    if (
+      await retryPromise(
+        () => lock.acquireLock(GET_TOKEN_SILENTLY_LOCK_KEY, 5000),
+        10
+      )
+    ) {
+      try {
+        const result = await new Promise<GetTokenSilentlyResult>(
+          async resolve => {
+            this.transactionManager.create({
+              authorizeUrl,
+              domainUrl: this.domainUrl,
+              nonce: nonceIn,
+              code_verifier: codeVerifier,
+              appState,
+              scope: params.scope,
+              audience: params.audience || 'default',
+              redirect_uri: params.redirect_uri,
+              state: stateIn,
+              callback: resolve,
+            });
+
+            await browser.tabs.create({ url });
+          }
+        );
+
+        return result;
+      } finally {
+        await lock.releaseLock(GET_TOKEN_SILENTLY_LOCK_KEY);
+
+        if (this.options.debug)
+          console.log('[auth0-web-extension] - lock released');
+      }
+    } else {
+      throw new TimeoutError();
+    }
+  }
+
+  private async _handleAuthorizeResponse(authResult: AuthenticationResult) {
+    const { error = '', error_description = '', state, code } = authResult;
+
+    const transaction = this.transactionManager.get();
+
+    if (!transaction) {
+      throw new Error('Invalid state');
+    }
+
+    this.transactionManager.remove();
+
+    if (this.options.debug) {
+      console.log('[auth0-web-extension] Unregistering current transaction');
+    }
+
+    if (authResult.error) {
+      throw new AuthenticationError(
+        error,
+        error_description,
+        authResult.state,
+        transaction.appState
+      );
+    }
+
+    if (
+      !transaction.code_verifier ||
+      (transaction.state && transaction.state !== state)
+    ) {
+      throw new Error('Invalid state');
+    }
+
+    const tokenResult = await oauthToken({
+      ...this.customOptions,
+      audience: transaction.audience,
+      scope: transaction.scope,
+      redirect_uri: transaction.redirect_uri || this.options.redirect_uri,
+      baseUrl: this.domainUrl,
+      client_id: this.options.client_id,
+      code_verifier: transaction.code_verifier,
+      grant_type: 'authorization_code',
+      code,
+      useFormData: this.options.useFormData,
+    });
+
+    if (this.options.debug) {
+      console.log(
+        '[auth0-web-extension] Received token using code and verifier'
+      );
+    }
+
+    const decodedToken = await this._verifyIdToken(
+      tokenResult.id_token,
+      transaction.nonce
+    );
+
+    await this.cacheManager.set({
+      ...tokenResult,
+      decodedToken,
+      audience: transaction.audience,
+      scope: transaction.scope,
+      ...(tokenResult.scope ? { oauthTokenScope: tokenResult.scope } : null),
+      client_id: this.options.client_id,
+    });
+
+    if (this.options.debug) {
+      console.log('[auth0-web-extension] Stored token in cache');
+    }
+
+    transaction.callback({
+      ...tokenResult,
+      decodedToken,
+      scope: transaction.scope,
+      oauthTokenScope: transaction.scope,
+      audience: transaction.audience,
+    });
+
+    return {
+      appState: transaction.appState,
+    };
+  }
+
   /**
    * ```js
    * const isAuthenticated = await auth0.isAuthenticated();
@@ -406,11 +607,6 @@ export default class Auth0Client {
         if (this.options.debug)
           console.log('[auth0-web-extension] - storing auth token in cache');
 
-        await this.cacheManager.set({
-          client_id: this.options.client_id,
-          ...authResult,
-        });
-
         // TODO: Save to cookies
 
         if (options.detailedResponse) {
@@ -448,9 +644,9 @@ export default class Auth0Client {
   ): Promise<GetTokenSilentlyResult> {
     const stateIn = encode(createSecureRandomString());
     const nonceIn = encode(createSecureRandomString());
-    const code_verifier = createSecureRandomString();
-    const code_challengeBuffer = await sha256(code_verifier);
-    const code_challenge = bufferToBase64UrlEncoded(code_challengeBuffer);
+    const codeVerifier = createSecureRandomString();
+    const codeChallengeBuffer = await sha256(codeVerifier);
+    const codeChallenge = bufferToBase64UrlEncoded(codeChallengeBuffer);
 
     if (this.options.debug)
       console.log('[auth0-web-extension] - getTokenFromIFrame');
@@ -459,7 +655,7 @@ export default class Auth0Client {
       options,
       stateIn,
       nonceIn,
-      code_challenge,
+      codeChallenge,
       options.redirect_uri || this.options.redirect_uri
     );
 
@@ -483,7 +679,7 @@ export default class Auth0Client {
           '[auth0-web-extension] - checking if current tab has content script running'
         );
 
-      const tabId = await retryPromise<number | null>(
+      const tabId = await retryPromiseOnReject<number | null>(
         this._getTabId.bind(this),
         10
       );
@@ -492,101 +688,23 @@ export default class Auth0Client {
         throw 'Failed to connect to tab too many times';
       }
 
-      if (this.options.debug)
-        console.log(
-          `[auth0-web-extension] - content script is running in tab id ${tabId}, connecting`
-        );
-
-      const codeResult: AuthenticationResult = await new Promise(resolve => {
-        const parentPort = browser.tabs.connect(tabId, {
-          name: PARENT_PORT_NAME,
-        });
-
-        if (this.options.debug)
-          console.log('[auth0-web-extension] - connected to content script');
-
-        const handler = (childPort: browser.Runtime.Port) => {
-          if (childPort.name === CHILD_PORT_NAME) {
-            childPort.onMessage.addListener(message => {
-              resolve(message);
-
-              if (this.options.debug)
-                console.log(
-                  `[auth0-web-extension] - received code, closing connections`
-                );
-
-              childPort.disconnect();
-              parentPort.disconnect();
-
-              browser.runtime.onConnect.removeListener(handler);
-            });
-
-            if (this.options.debug)
-              console.log(`[auth0-web-extension] - sending authorize url`);
-
-            childPort.postMessage({
-              authorizeUrl: url,
-              domainUrl: this.domainUrl,
-            });
-          }
-        };
-
-        browser.runtime.onConnect.addListener(handler);
-
-        if (this.options.debug)
-          console.log('[auth0-web-extension] - starting handshake');
-
-        parentPort.postMessage({
-          redirectUri: params.redirect_uri,
-        });
+      await this.messenger.sendTabMessage(tabId, {
+        type: 'auth-start',
       });
 
-      if (stateIn !== codeResult.state) {
-        throw new Error('Invalid state');
-      }
-
-      const {
-        scope,
-        redirect_uri,
-        audience,
-        ignoreCache,
-        timeoutInSeconds,
-        detailedResponse,
-        ...customOptions
-      } = options;
-
-      if (this.options.debug)
-        console.log('[auth0-web-extension] - using code to retrieve token');
-
-      const tokenResult = await oauthToken({
-        ...this.customOptions,
-        ...customOptions,
-        scope,
-        audience,
-        baseUrl: this.domainUrl,
-        client_id: this.options.client_id,
-        code_verifier,
-        code: codeResult.code,
-        grant_type: 'authorization_code',
-        redirect_uri: params.redirect_uri,
-        useFormData: this.options.useFormData,
+      return new Promise<GetTokenSilentlyResult>(resolve => {
+        this.transactionManager.create({
+          authorizeUrl: url,
+          domainUrl: this.domainUrl,
+          nonce: nonceIn,
+          code_verifier: codeVerifier,
+          scope: params.scope,
+          audience: params.audience || 'default',
+          redirect_uri: params.redirect_uri,
+          state: stateIn,
+          callback: resolve,
+        });
       });
-
-      if (this.options.debug)
-        console.log('[auth0-web-extension] - decoding token');
-
-      const decodedToken = await this._verifyIdToken(
-        tokenResult.id_token,
-        nonceIn
-      );
-
-      return {
-        ...tokenResult,
-        decodedToken,
-        scope: params.scope,
-        oauthTokenScope: tokenResult.scope as string,
-        audience: params.audience || 'default',
-      };
     } catch (e) {
       if ((e as any).error === 'login_required') {
         // TODO: Log user out
@@ -608,7 +726,9 @@ export default class Auth0Client {
 
       if (id) {
         // This will throw if there is not a content script running
-        const resp = await browser.tabs.sendMessage(id, '');
+        const resp = await this.messenger.sendTabMessage(id, {
+          type: 'auth-ack',
+        });
 
         if (this.options.debug)
           console.log(
@@ -617,6 +737,8 @@ export default class Auth0Client {
 
         if (resp === 'ack') {
           return id;
+        } else {
+          throw new Error('Received invalid response on acknowledgement');
         }
       }
     } catch (error) {

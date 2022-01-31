@@ -5,6 +5,7 @@ import {
   IdToken,
 } from '../../src';
 
+import * as utils from '../../src/utils';
 import Auth0Client from '../../src/Auth0Client';
 
 import {
@@ -54,7 +55,7 @@ export const assertUrlEquals = (
   strict: boolean = true
 ) => {
   const url = new URL(actualUrl);
-  const searchParamsObj = itorToObject((url.searchParams as any).entries());
+  const searchParamsObj = itorToObject(url.searchParams.entries());
 
   expect(url.host).toEqual(host);
   expect(url.pathname).toEqual(path);

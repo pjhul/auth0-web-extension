@@ -1,7 +1,12 @@
 /**
- * @jest-environment node
+ * @jest-environment jsdom
  */
-import { retryPromise, singlePromise, delay } from '../src/promise-utils';
+import {
+  retryPromise,
+  singlePromise,
+  delay,
+  retryPromiseOnReject,
+} from '../src/promise-utils';
 
 describe('Promise Utils', () => {
   describe('delay', () => {
@@ -47,11 +52,11 @@ describe('Promise Utils', () => {
     });
   });
 
-  describe('retryPromise', () => {
+  describe('retryPromiseOnReject', () => {
     it('does not retry promise when it resolves', async () => {
       const cb = jest.fn().mockResolvedValue(true);
 
-      const value = await retryPromise(cb as any);
+      const value = await retryPromiseOnReject(cb as any);
 
       expect(value).toBe(true);
       expect(cb).toHaveBeenCalledTimes(1);
@@ -68,7 +73,7 @@ describe('Promise Utils', () => {
         return Promise.reject('Promise failed');
       });
 
-      const value = await retryPromise(cb as any);
+      const value = await retryPromiseOnReject(cb as any);
 
       expect(value).toBe(true);
       expect(cb).toHaveBeenCalledTimes(3);
@@ -77,7 +82,7 @@ describe('Promise Utils', () => {
     it('resolves to null when all retries reject', async () => {
       const cb = jest.fn().mockRejectedValue('Promise failed');
 
-      const value = await retryPromise(cb as any, 5);
+      const value = await retryPromiseOnReject(cb as any, 5);
 
       expect(value).toBe(null);
       expect(cb).toHaveBeenCalledTimes(5);

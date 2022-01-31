@@ -123,7 +123,7 @@ export class CacheManager {
 
     const expirySeconds = Math.min(
       expiresInTime,
-      entry.decodedToken.claims.exp || Infinity
+      entry.decodedToken.claims.exp
     );
 
     return {

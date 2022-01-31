@@ -14,6 +14,7 @@ module.exports = {
   testEnvironment: 'jsdom',
   testMatch: ['**/__tests__/**/*.test.ts'],
   coverageReporters: ['lcov', 'text', 'text-summary'],
+  setupFiles: ['./__tests__/setupTests.ts'],
   globals: {
     'ts-jest': {
       tsconfig: './tsconfig.test.json',

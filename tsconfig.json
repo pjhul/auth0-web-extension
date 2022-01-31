@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "es5",
     "module": "esnext",
-    "lib": ["dom", "es6"],
+    "lib": ["dom", "es6", "dom.iterable"],
 
     "declaration": true,
     "declarationDir": "./types",
@@ -22,5 +22,5 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": ["./src/**/*.ts"],
-  "exclude": ["__tests__", "dist/types"]
+  "exclude": ["__tests__/", "dist/types", "**/__mocks__/**"]
 }

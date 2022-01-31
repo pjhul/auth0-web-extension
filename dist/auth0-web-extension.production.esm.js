@@ -1455,6 +1455,23 @@ function getLock() {
     return ProcessLocking.getInstance();
 }
 
+var parseQueryResult = function (queryString) {
+    if (queryString.indexOf('#') > -1) {
+        queryString = queryString.slice(0, queryString.indexOf('#'));
+    }
+    var queryParams = queryString.split('&');
+    var parsedQuery = {};
+    queryParams.forEach(function (qp) {
+        var _a = qp.split('='), key = _a[0], val = _a[1];
+        if (key && val) {
+            parsedQuery[key] = decodeURIComponent(val);
+        }
+    });
+    if (parsedQuery.expires_in) {
+        parsedQuery.expires_in = parseInt(parsedQuery.expires_in);
+    }
+    return parsedQuery;
+};
 var getCrypto = function () {
     // FIXME: window is not accessible in background script
     //ie 11.x uses msCrypto
@@ -1852,9 +1869,52 @@ var Lock = /** @class */ (function () {
     return Lock;
 }());
 
+var Messenger = /** @class */ (function () {
+    function Messenger() {
+    }
+    Messenger.prototype.sendTabMessage = function (tabId, message) {
+        var wrappedMessage = __assign(__assign({}, message), { source: 'auth0-web-extension' });
+        return browser$1.tabs.sendMessage(tabId, wrappedMessage);
+    };
+    Messenger.prototype.sendRuntimeMessage = function (message) {
+        var wrappedMessage = __assign(__assign({}, message), { source: 'auth0-web-extension' });
+        return browser$1.runtime.sendMessage(undefined, wrappedMessage);
+    };
+    Messenger.prototype.addMessageListener = function (handler) {
+        browser$1.runtime.onMessage.addListener(function (message, sender) {
+            if (message.source === 'auth0-web-extension') {
+                return Promise.resolve(handler(message, sender));
+            }
+        });
+    };
+    return Messenger;
+}());
+
+var TRANSACTION_STORAGE_KEY_PREFIX = 'a0.webext.txs';
+var TransactionManager = /** @class */ (function () {
+    function TransactionManager(storage, clientId) {
+        this.storage = storage;
+        this.clientId = clientId;
+        this.storageKey = "".concat(TRANSACTION_STORAGE_KEY_PREFIX, ".").concat(this.clientId);
+        this.transaction = this.storage.get(this.storageKey);
+    }
+    TransactionManager.prototype.create = function (transaction) {
+        this.transaction = transaction;
+        this.storage.save(this.storageKey, transaction, {
+            daysUntilExpire: 1,
+        });
+    };
+    TransactionManager.prototype.get = function () {
+        return this.transaction;
+    };
+    TransactionManager.prototype.remove = function () {
+        delete this.transaction;
+        this.storage.remove(this.storageKey);
+    };
+    return TransactionManager;
+}());
+
 var DEFAULT_SCOPE = 'openid profile email';
-var PARENT_PORT_NAME = 'auth0-web-extension::parent';
-var CHILD_PORT_NAME = 'auth0-web-extension::child';
 var CACHE_LOCATION_MEMORY = 'memory';
 var RECOVERABLE_ERRORS = [
     'login_required',
@@ -2204,6 +2264,26 @@ var getUniqueScopes = function () {
     return dedupe(scopes.filter(Boolean).join(' ').trim().split(/\s+/)).join(' ');
 };
 
+var InMemoryStorage = /** @class */ (function () {
+    function InMemoryStorage() {
+        this.storage = {};
+    }
+    InMemoryStorage.prototype.get = function (key) {
+        var value = this.storage[key];
+        if (typeof value === 'undefined') {
+            return;
+        }
+        return JSON.parse(value);
+    };
+    InMemoryStorage.prototype.save = function (key, value) {
+        this.storage[key] = JSON.stringify(value);
+    };
+    InMemoryStorage.prototype.remove = function (key) {
+        delete this.storage[key];
+    };
+    return InMemoryStorage;
+}());
+
 var InMemoryCache = /** @class */ (function () {
     function InMemoryCache() {
         this.enclosedCache = (function () {
@@ -2423,7 +2503,7 @@ var CacheManager = /** @class */ (function () {
                     case 1:
                         now = _a.sent();
                         expiresInTime = Math.floor(now / 1000) + entry.expires_in;
-                        expirySeconds = Math.min(expiresInTime, entry.decodedToken.claims.exp || Infinity);
+                        expirySeconds = Math.min(expiresInTime, entry.decodedToken.claims.exp);
                         return [2 /*return*/, {
                                 body: entry,
                                 expiresAt: expirySeconds,
@@ -2555,10 +2635,32 @@ var singlePromise = function (cb, key) {
     }
     return promise;
 };
-// NOTE: This behaviour has been changed compared to auth0-spa-js
-// Instead of retrying until the promise returns 'true', we retry until it dose not reject
-// This is to support functions other than those that just return booleans
 var retryPromise = function (cb, maxNumberOfRetries) {
+    if (maxNumberOfRetries === void 0) { maxNumberOfRetries = 3; }
+    return __awaiter(void 0, void 0, void 0, function () {
+        var i;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    i = 0;
+                    _a.label = 1;
+                case 1:
+                    if (!(i < maxNumberOfRetries)) return [3 /*break*/, 4];
+                    return [4 /*yield*/, cb()];
+                case 2:
+                    if (_a.sent()) {
+                        return [2 /*return*/, true];
+                    }
+                    _a.label = 3;
+                case 3:
+                    i++;
+                    return [3 /*break*/, 1];
+                case 4: return [2 /*return*/, false];
+            }
+        });
+    });
+};
+var retryPromiseOnReject = function (cb, maxNumberOfRetries) {
     if (maxNumberOfRetries === void 0) { maxNumberOfRetries = 3; }
     return __awaiter(void 0, void 0, void 0, function () {
         var i, result;
@@ -2596,6 +2698,7 @@ var GET_TOKEN_SILENTLY_LOCK_KEY = 'auth0.lock.getTokenSilently';
  */
 var Auth0Client = /** @class */ (function () {
     function Auth0Client(options) {
+        var _this = this;
         var _a, _b;
         this.options = options;
         validateCrypto();
@@ -2616,6 +2719,9 @@ var Auth0Client = /** @class */ (function () {
             }
             cache = factory();
         }
+        var transactionStorage = new InMemoryStorage();
+        this.transactionManager = new TransactionManager(transactionStorage, this.options.client_id);
+        this.messenger = new Messenger();
         this.scope = this.options.scope;
         this.nowProvider = this.options.nowProvider || DEFAULT_NOW_PROVIDER;
         this.cacheManager = new CacheManager(cache, !cache.allKeys
@@ -2628,6 +2734,36 @@ var Auth0Client = /** @class */ (function () {
             : DEFAULT_SCOPE);
         if (this.options.useRefreshTokens) ;
         this.customOptions = getCustomInitialOptions(options);
+        this.messenger.addMessageListener(function (message, sender) {
+            var _a;
+            switch (message.type) {
+                case 'auth-result':
+                    if ((_a = sender.tab) === null || _a === void 0 ? void 0 : _a.id) {
+                        _this.messenger.sendTabMessage(sender.tab.id, {
+                            type: 'auth-cleanup',
+                        });
+                    }
+                    if (_this.options.debug) {
+                        console.log('[auth0-web-extension] Received authentication result back, cleaning up...');
+                    }
+                    _this._handleAuthorizeResponse(message.payload);
+                    break;
+                case 'auth-params':
+                    var transaction = _this.transactionManager.get();
+                    if (_this.options.debug) {
+                        console.log('[auth0-web-extension] Sending authorize url to content script');
+                    }
+                    if (transaction) {
+                        return {
+                            authorizeUrl: transaction.authorizeUrl,
+                            domainUrl: transaction.domainUrl,
+                        };
+                    }
+                    break;
+                default:
+                    throw new Error("Invalid message type ".concat(message.type));
+            }
+        });
     }
     Auth0Client.prototype._url = function (path) {
         // TODO: Not sure if we should include the auth0Client param or not?
@@ -2736,6 +2872,116 @@ var Auth0Client = /** @class */ (function () {
             });
         });
     };
+    Auth0Client.prototype.loginWithNewTab = function (options) {
+        if (options === void 0) { options = {}; }
+        return __awaiter(this, void 0, void 0, function () {
+            var redirect_uri, appState, authorizeOptions, stateIn, nonceIn, codeVerifier, codeChallengeBuffer, codeChallenge, fragment, params, url, authorizeUrl, result;
+            var _this = this;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        redirect_uri = options.redirect_uri, appState = options.appState, authorizeOptions = __rest(options, ["redirect_uri", "appState"]);
+                        stateIn = encode(createSecureRandomString());
+                        nonceIn = encode(createSecureRandomString());
+                        codeVerifier = createSecureRandomString();
+                        return [4 /*yield*/, sha256(codeVerifier)];
+                    case 1:
+                        codeChallengeBuffer = _a.sent();
+                        codeChallenge = bufferToBase64UrlEncoded(codeChallengeBuffer);
+                        fragment = options.fragment ? "#".concat(options.fragment) : '';
+                        params = this._getParams(authorizeOptions, stateIn, nonceIn, codeChallenge, redirect_uri);
+                        url = this._authorizeUrl(params);
+                        authorizeUrl = url + fragment;
+                        return [4 /*yield*/, retryPromise(function () { return lock.acquireLock(GET_TOKEN_SILENTLY_LOCK_KEY, 5000); }, 10)];
+                    case 2:
+                        if (!_a.sent()) return [3 /*break*/, 8];
+                        _a.label = 3;
+                    case 3:
+                        _a.trys.push([3, , 5, 7]);
+                        return [4 /*yield*/, new Promise(function (resolve) { return __awaiter(_this, void 0, void 0, function () {
+                                return __generator(this, function (_a) {
+                                    switch (_a.label) {
+                                        case 0:
+                                            this.transactionManager.create({
+                                                authorizeUrl: authorizeUrl,
+                                                domainUrl: this.domainUrl,
+                                                nonce: nonceIn,
+                                                code_verifier: codeVerifier,
+                                                appState: appState,
+                                                scope: params.scope,
+                                                audience: params.audience || 'default',
+                                                redirect_uri: params.redirect_uri,
+                                                state: stateIn,
+                                                callback: resolve,
+                                            });
+                                            return [4 /*yield*/, browser$1.tabs.create({ url: url })];
+                                        case 1:
+                                            _a.sent();
+                                            return [2 /*return*/];
+                                    }
+                                });
+                            }); })];
+                    case 4:
+                        result = _a.sent();
+                        return [2 /*return*/, result];
+                    case 5: return [4 /*yield*/, lock.releaseLock(GET_TOKEN_SILENTLY_LOCK_KEY)];
+                    case 6:
+                        _a.sent();
+                        if (this.options.debug)
+                            console.log('[auth0-web-extension] - lock released');
+                        return [7 /*endfinally*/];
+                    case 7: return [3 /*break*/, 9];
+                    case 8: throw new TimeoutError();
+                    case 9: return [2 /*return*/];
+                }
+            });
+        });
+    };
+    Auth0Client.prototype._handleAuthorizeResponse = function (authResult) {
+        return __awaiter(this, void 0, void 0, function () {
+            var _a, error, _b, error_description, state, code, transaction, tokenResult, decodedToken;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0:
+                        _a = authResult.error, error = _a === void 0 ? '' : _a, _b = authResult.error_description, error_description = _b === void 0 ? '' : _b, state = authResult.state, code = authResult.code;
+                        transaction = this.transactionManager.get();
+                        if (!transaction) {
+                            throw new Error('Invalid state');
+                        }
+                        this.transactionManager.remove();
+                        if (this.options.debug) {
+                            console.log('[auth0-web-extension] Unregistering current transaction');
+                        }
+                        if (authResult.error) {
+                            throw new AuthenticationError(error, error_description, authResult.state, transaction.appState);
+                        }
+                        if (!transaction.code_verifier ||
+                            (transaction.state && transaction.state !== state)) {
+                            throw new Error('Invalid state');
+                        }
+                        return [4 /*yield*/, oauthToken(__assign(__assign({}, this.customOptions), { audience: transaction.audience, scope: transaction.scope, redirect_uri: transaction.redirect_uri || this.options.redirect_uri, baseUrl: this.domainUrl, client_id: this.options.client_id, code_verifier: transaction.code_verifier, grant_type: 'authorization_code', code: code, useFormData: this.options.useFormData }))];
+                    case 1:
+                        tokenResult = _c.sent();
+                        if (this.options.debug) {
+                            console.log('[auth0-web-extension] Received token using code and verifier');
+                        }
+                        return [4 /*yield*/, this._verifyIdToken(tokenResult.id_token, transaction.nonce)];
+                    case 2:
+                        decodedToken = _c.sent();
+                        return [4 /*yield*/, this.cacheManager.set(__assign(__assign(__assign(__assign({}, tokenResult), { decodedToken: decodedToken, audience: transaction.audience, scope: transaction.scope }), (tokenResult.scope ? { oauthTokenScope: tokenResult.scope } : null)), { client_id: this.options.client_id }))];
+                    case 3:
+                        _c.sent();
+                        if (this.options.debug) {
+                            console.log('[auth0-web-extension] Stored token in cache');
+                        }
+                        transaction.callback(__assign(__assign({}, tokenResult), { decodedToken: decodedToken, scope: transaction.scope, oauthTokenScope: transaction.scope, audience: transaction.audience }));
+                        return [2 /*return*/, {
+                                appState: transaction.appState,
+                            }];
+                }
+            });
+        });
+    };
     /**
      * ```js
      * const isAuthenticated = await auth0.isAuthenticated();
@@ -2837,12 +3083,12 @@ var Auth0Client = /** @class */ (function () {
                             console.log('[auth0-web-extension] - waiting for lock');
                         return [4 /*yield*/, retryPromise(function () { return lock.acquireLock(GET_TOKEN_SILENTLY_LOCK_KEY, 5000); }, 10)];
                     case 3:
-                        if (!_b.sent()) return [3 /*break*/, 15];
+                        if (!_b.sent()) return [3 /*break*/, 14];
                         if (this.options.debug)
                             console.log('[auth0-web-extension] - lock acquired!');
                         _b.label = 4;
                     case 4:
-                        _b.trys.push([4, , 12, 14]);
+                        _b.trys.push([4, , 11, 13]);
                         if (!(!ignoreCache && getTokenOptions.scope)) return [3 /*break*/, 6];
                         if (this.options.debug)
                             console.log('[auth0-web-extension] - checking cache again to make sure it was not populated while waiting for lock');
@@ -2876,24 +3122,21 @@ var Auth0Client = /** @class */ (function () {
                         authResult = _a;
                         if (this.options.debug)
                             console.log('[auth0-web-extension] - storing auth token in cache');
-                        return [4 /*yield*/, this.cacheManager.set(__assign({ client_id: this.options.client_id }, authResult))];
-                    case 11:
-                        _b.sent();
                         // TODO: Save to cookies
                         if (options.detailedResponse) {
                             id_token = authResult.id_token, access_token = authResult.access_token, oauthTokenScope = authResult.oauthTokenScope, expires_in = authResult.expires_in;
                             return [2 /*return*/, __assign(__assign({ id_token: id_token, access_token: access_token }, (oauthTokenScope ? { scope: oauthTokenScope } : null)), { expires_in: expires_in })];
                         }
                         return [2 /*return*/, authResult.access_token];
-                    case 12: return [4 /*yield*/, lock.releaseLock(GET_TOKEN_SILENTLY_LOCK_KEY)];
-                    case 13:
+                    case 11: return [4 /*yield*/, lock.releaseLock(GET_TOKEN_SILENTLY_LOCK_KEY)];
+                    case 12:
                         _b.sent();
                         if (this.options.debug)
                             console.log('[auth0-web-extension] - lock released');
                         return [7 /*endfinally*/];
-                    case 14: return [3 /*break*/, 16];
-                    case 15: throw new TimeoutError();
-                    case 16: return [2 /*return*/];
+                    case 13: return [3 /*break*/, 15];
+                    case 14: throw new TimeoutError();
+                    case 15: return [2 /*return*/];
                 }
             });
         });
@@ -2907,91 +3150,59 @@ var Auth0Client = /** @class */ (function () {
     };
     Auth0Client.prototype._getTokenFromIFrame = function (options) {
         return __awaiter(this, void 0, void 0, function () {
-            var stateIn, nonceIn, code_verifier, code_challengeBuffer, code_challenge, params, url, tabId_1, codeResult, scope, audience, customOptions, tokenResult, decodedToken, e_1;
+            var stateIn, nonceIn, codeVerifier, codeChallengeBuffer, codeChallenge, params, url, tabId, e_1;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         stateIn = encode(createSecureRandomString());
                         nonceIn = encode(createSecureRandomString());
-                        code_verifier = createSecureRandomString();
-                        return [4 /*yield*/, sha256(code_verifier)];
+                        codeVerifier = createSecureRandomString();
+                        return [4 /*yield*/, sha256(codeVerifier)];
                     case 1:
-                        code_challengeBuffer = _a.sent();
-                        code_challenge = bufferToBase64UrlEncoded(code_challengeBuffer);
+                        codeChallengeBuffer = _a.sent();
+                        codeChallenge = bufferToBase64UrlEncoded(codeChallengeBuffer);
                         if (this.options.debug)
                             console.log('[auth0-web-extension] - getTokenFromIFrame');
-                        params = this._getParams(options, stateIn, nonceIn, code_challenge, options.redirect_uri || this.options.redirect_uri);
+                        params = this._getParams(options, stateIn, nonceIn, codeChallenge, options.redirect_uri || this.options.redirect_uri);
                         url = this._authorizeUrl(__assign(__assign({}, params), { prompt: 'none', response_mode: 'web_message' }));
                         if (this.options.debug)
                             console.log('[auth0-web-extension] - built authorize url');
                         options.timeoutInSeconds || this.options.authorizeTimeoutInSeconds;
                         _a.label = 2;
                     case 2:
-                        _a.trys.push([2, 7, , 8]);
+                        _a.trys.push([2, 5, , 6]);
                         if (this.options.debug)
                             console.log('[auth0-web-extension] - checking if current tab has content script running');
-                        return [4 /*yield*/, retryPromise(this._getTabId.bind(this), 10)];
+                        return [4 /*yield*/, retryPromiseOnReject(this._getTabId.bind(this), 10)];
                     case 3:
-                        tabId_1 = _a.sent();
-                        if (!tabId_1) {
+                        tabId = _a.sent();
+                        if (!tabId) {
                             throw 'Failed to connect to tab too many times';
                         }
-                        if (this.options.debug)
-                            console.log("[auth0-web-extension] - content script is running in tab id ".concat(tabId_1, ", connecting"));
-                        return [4 /*yield*/, new Promise(function (resolve) {
-                                var parentPort = browser$1.tabs.connect(tabId_1, {
-                                    name: PARENT_PORT_NAME,
-                                });
-                                if (_this.options.debug)
-                                    console.log('[auth0-web-extension] - connected to content script');
-                                var handler = function (childPort) {
-                                    if (childPort.name === CHILD_PORT_NAME) {
-                                        childPort.onMessage.addListener(function (message) {
-                                            resolve(message);
-                                            if (_this.options.debug)
-                                                console.log("[auth0-web-extension] - received code, closing connections");
-                                            childPort.disconnect();
-                                            parentPort.disconnect();
-                                            browser$1.runtime.onConnect.removeListener(handler);
-                                        });
-                                        if (_this.options.debug)
-                                            console.log("[auth0-web-extension] - sending authorize url");
-                                        childPort.postMessage({
-                                            authorizeUrl: url,
-                                            domainUrl: _this.domainUrl,
-                                        });
-                                    }
-                                };
-                                browser$1.runtime.onConnect.addListener(handler);
-                                if (_this.options.debug)
-                                    console.log('[auth0-web-extension] - starting handshake');
-                                parentPort.postMessage({
-                                    redirectUri: params.redirect_uri,
-                                });
+                        return [4 /*yield*/, this.messenger.sendTabMessage(tabId, {
+                                type: 'auth-start',
                             })];
                     case 4:
-                        codeResult = _a.sent();
-                        if (stateIn !== codeResult.state) {
-                            throw new Error('Invalid state');
-                        }
-                        scope = options.scope, audience = options.audience, customOptions = __rest(options, ["scope", "redirect_uri", "audience", "ignoreCache", "timeoutInSeconds", "detailedResponse"]);
-                        if (this.options.debug)
-                            console.log('[auth0-web-extension] - using code to retrieve token');
-                        return [4 /*yield*/, oauthToken(__assign(__assign(__assign({}, this.customOptions), customOptions), { scope: scope, audience: audience, baseUrl: this.domainUrl, client_id: this.options.client_id, code_verifier: code_verifier, code: codeResult.code, grant_type: 'authorization_code', redirect_uri: params.redirect_uri, useFormData: this.options.useFormData }))];
+                        _a.sent();
+                        return [2 /*return*/, new Promise(function (resolve) {
+                                _this.transactionManager.create({
+                                    authorizeUrl: url,
+                                    domainUrl: _this.domainUrl,
+                                    nonce: nonceIn,
+                                    code_verifier: codeVerifier,
+                                    scope: params.scope,
+                                    audience: params.audience || 'default',
+                                    redirect_uri: params.redirect_uri,
+                                    state: stateIn,
+                                    callback: resolve,
+                                });
+                            })];
                     case 5:
-                        tokenResult = _a.sent();
-                        if (this.options.debug)
-                            console.log('[auth0-web-extension] - decoding token');
-                        return [4 /*yield*/, this._verifyIdToken(tokenResult.id_token, nonceIn)];
-                    case 6:
-                        decodedToken = _a.sent();
-                        return [2 /*return*/, __assign(__assign({}, tokenResult), { decodedToken: decodedToken, scope: params.scope, oauthTokenScope: tokenResult.scope, audience: params.audience || 'default' })];
-                    case 7:
                         e_1 = _a.sent();
                         if (e_1.error === 'login_required') ;
                         throw e_1;
-                    case 8: return [2 /*return*/];
+                    case 6: return [2 /*return*/];
                 }
             });
         });
@@ -3011,7 +3222,9 @@ var Auth0Client = /** @class */ (function () {
                         if (this.options.debug)
                             console.log("[auth0-web-extension] - current tab id ".concat(id));
                         if (!id) return [3 /*break*/, 3];
-                        return [4 /*yield*/, browser$1.tabs.sendMessage(id, '')];
+                        return [4 /*yield*/, this.messenger.sendTabMessage(id, {
+                                type: 'auth-ack',
+                            })];
                     case 2:
                         resp = _a.sent();
                         if (this.options.debug)
@@ -3019,7 +3232,9 @@ var Auth0Client = /** @class */ (function () {
                         if (resp === 'ack') {
                             return [2 /*return*/, id];
                         }
-                        _a.label = 3;
+                        else {
+                            throw new Error('Received invalid response on acknowledgement');
+                        }
                     case 3: return [3 /*break*/, 5];
                     case 4:
                         error_2 = _a.sent();
@@ -3128,62 +3343,83 @@ var User = /** @class */ (function () {
 
 // We can probably pull redirectUri from background script at some point
 function handleTokenRequest(redirectUri, options) {
-    var _this = this;
-    var _a = (options || {}).debug, debug = _a === void 0 ? false : _a;
-    browser$1.runtime.onMessage.addListener(function () {
-        return Promise.resolve('ack');
-    });
-    if (window.location.origin === redirectUri) {
-        if (debug)
-            console.log('[auth0-web-extension] window origin is the same as redirect url, running in iFrame');
-        var port = browser$1.runtime.connect(undefined, { name: CHILD_PORT_NAME });
-        if (debug)
-            console.log('[auth0-web-extension] connected to background script');
-        var handler = function (message, port) { return __awaiter(_this, void 0, void 0, function () {
-            var authorizeUrl, domainUrl, codeResult;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (!(port.name === CHILD_PORT_NAME)) return [3 /*break*/, 2];
-                        if (debug)
-                            console.log('[auth0-web-extension] received authorizeUrl from background script');
-                        authorizeUrl = message.authorizeUrl, domainUrl = message.domainUrl;
-                        return [4 /*yield*/, runIFrame(authorizeUrl, domainUrl, 60, debug)];
-                    case 1:
-                        codeResult = _a.sent();
-                        port.postMessage(codeResult);
-                        _a.label = 2;
-                    case 2: return [2 /*return*/];
-                }
-            });
-        }); };
-        port.onMessage.addListener(handler);
-    }
-    else {
-        if (debug)
-            console.log('[auth0-web-extension] waiting for background to commence handshake');
-        browser$1.runtime.onConnect.addListener(function (port) {
-            if (port.name === PARENT_PORT_NAME) {
-                if (debug)
-                    console.log('[auth0-web-extension] creating iframe of redirect uri');
-                var handler_1 = function () {
-                    var iframe = document.createElement('iframe');
-                    iframe.setAttribute('width', '0');
-                    iframe.setAttribute('height', '0');
-                    iframe.style.display = 'none';
-                    document.body.appendChild(iframe);
-                    iframe.setAttribute('src', redirectUri);
-                    port.onMessage.removeListener(handler_1);
-                    port.onDisconnect.addListener(function () {
-                        if (debug)
-                            console.log('[auth0-web-extension] port disconnected, removing redirect uri iframe');
-                        window.document.body.removeChild(iframe);
+    return __awaiter(this, void 0, void 0, function () {
+        var messenger, _a, debug, results, _b, authorizeUrl, domainUrl, codeResult, iframe_1;
+        return __generator(this, function (_c) {
+            switch (_c.label) {
+                case 0:
+                    messenger = new Messenger();
+                    _a = (options || {}).debug, debug = _a === void 0 ? false : _a;
+                    if (!(window.location.origin === redirectUri)) return [3 /*break*/, 7];
+                    if (!(window.location.search.includes('code=') &&
+                        window.location.search.includes('state='))) return [3 /*break*/, 2];
+                    results = parseQueryResult(window.location.search.slice(1));
+                    if (debug) {
+                        console.log('[auth0-web-extension] Returning results');
+                    }
+                    return [4 /*yield*/, messenger.sendRuntimeMessage({
+                            type: 'auth-result',
+                            payload: results,
+                        })];
+                case 1:
+                    _c.sent();
+                    window.close();
+                    return [3 /*break*/, 6];
+                case 2: return [4 /*yield*/, messenger.sendRuntimeMessage({
+                        type: 'auth-params',
+                    })];
+                case 3:
+                    _b = _c.sent(), authorizeUrl = _b.authorizeUrl, domainUrl = _b.domainUrl;
+                    if (debug) {
+                        console.log('[auth0-web-extension] Creating /authorize url IFrame');
+                    }
+                    return [4 /*yield*/, runIFrame(authorizeUrl, domainUrl, 60, debug)];
+                case 4:
+                    codeResult = _c.sent();
+                    if (debug) {
+                        console.log('[auth0-web-extension] Returning results');
+                    }
+                    return [4 /*yield*/, messenger.sendRuntimeMessage({
+                            type: 'auth-result',
+                            payload: codeResult,
+                        })];
+                case 5:
+                    _c.sent();
+                    _c.label = 6;
+                case 6: return [3 /*break*/, 8];
+                case 7:
+                    messenger.addMessageListener(function (message) {
+                        switch (message.type) {
+                            case 'auth-start':
+                                if (debug) {
+                                    console.log('[auth0-web-extension] Create redirect uri IFrame');
+                                }
+                                iframe_1 = document.createElement('iframe');
+                                iframe_1.setAttribute('width', '0');
+                                iframe_1.setAttribute('height', '0');
+                                iframe_1.style.display = 'none';
+                                document.body.appendChild(iframe_1);
+                                iframe_1.setAttribute('src', redirectUri);
+                                break;
+                            case 'auth-cleanup':
+                                if (debug) {
+                                    console.log('[auth0-web-extension] Cleaning up IFrame');
+                                }
+                                if (iframe_1) {
+                                    window.document.body.removeChild(iframe_1);
+                                }
+                                break;
+                            case 'auth-ack':
+                                return 'ack';
+                            default:
+                                throw new Error("Unexpected message type ".concat(message.type));
+                        }
                     });
-                };
-                port.onMessage.addListener(handler_1);
+                    _c.label = 8;
+                case 8: return [2 /*return*/];
             }
         });
-    }
+    });
 }
 var runIFrame = function (authorizeUrl, eventOrigin, timeoutInSeconds, debug) {
     if (timeoutInSeconds === void 0) { timeoutInSeconds = 60; }

@@ -1,9 +1,11 @@
-import { Auth0ClientOptions, CacheLocation, GetTokenSilentlyOptions, GetTokenSilentlyVerboseResult, User, GetUserOptions, IdToken, GetIdTokenClaimsOptions } from './global';
+import { Auth0ClientOptions, CacheLocation, GetTokenSilentlyOptions, GetTokenSilentlyResult, GetTokenSilentlyVerboseResult, User, GetUserOptions, IdToken, GetIdTokenClaimsOptions, RedirectLoginOptions } from './global';
 /**
  * Auth0 SDK for Background Scripts in a Web Extension
  */
 export default class Auth0Client {
     private options;
+    private transactionManager;
+    private messenger;
     private cacheManager;
     private customOptions;
     private domainUrl;
@@ -45,6 +47,8 @@ export default class Auth0Client {
      * @param options
      */
     getIdTokenClaims(options?: GetIdTokenClaimsOptions): Promise<IdToken | undefined>;
+    loginWithNewTab<TAppState = any>(options?: RedirectLoginOptions<TAppState>): Promise<GetTokenSilentlyResult>;
+    private _handleAuthorizeResponse;
     /**
      * ```js
      * const isAuthenticated = await auth0.isAuthenticated();

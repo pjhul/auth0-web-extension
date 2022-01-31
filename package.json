@@ -10,7 +10,7 @@
     "build": "rimraf dist && rollup -m -c --environment NODE_ENV:production",
     "dev": "rimraf dist && rollup -mcw",
     "test": "jest --coverage --silent",
-    "test:watch": "jest --coverage --watch",
+    "test:watch": "jest --coverage --watch --silent=false",
     "prepare": "husky install"
   },
   "repository": {

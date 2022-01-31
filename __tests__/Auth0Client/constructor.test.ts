@@ -5,14 +5,6 @@ import { MessageChannel } from 'worker_threads';
 import * as utils from '../../src/utils';
 import * as scope from '../../src/scope';
 
-// Prevent webextension-polyfill from complaining during unit tests
-// @ts-ignore
-window.chrome = {
-  runtime: {
-    id: 'testid',
-  },
-};
-
 // @ts-ignore
 
 import { assertUrlEquals, loginWithRedirectFn, setupFn } from './helpers';

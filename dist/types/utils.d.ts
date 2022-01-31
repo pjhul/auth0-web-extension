@@ -1,3 +1,5 @@
+import { AuthenticationResult } from './global';
+export declare const parseQueryResult: (queryString: string) => AuthenticationResult;
 export declare const getCrypto: () => Crypto;
 export declare const getCryptoSubtle: () => SubtleCrypto;
 export declare const createRandomString: (length: number) => string;

@@ -251,6 +251,29 @@ export interface AuthorizeOptions extends BaseLoginOptions {
   code_challenge_method: string;
 }
 
+export interface RedirectLoginOptions<TAppState = any>
+  extends BaseLoginOptions {
+  /**
+   * The URL where Auth0 will redirect your browser to with
+   * the authentication result. It must be whitelisted in
+   * the "Allowed Callback URLs" field in your Auth0 Application's
+   * settings.
+   */
+  redirect_uri?: string;
+  /**
+   * Used to store state before doing the redirect
+   */
+  appState?: TAppState;
+  /**
+   * Used to add to the URL fragment before redirecting
+   */
+  fragment?: string;
+  /**
+   * Used to select the window.location method used to redirect
+   */
+  redirectMethod?: 'replace' | 'assign';
+}
+
 export interface GetUserOptions {
   /**
    * The scope that was used in the authentication request
