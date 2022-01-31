@@ -3,10 +3,10 @@ name: Node.js Package Publish
 on:
   release:
     types: [created]
-  workflow_dispatch:
 
 jobs:
   build:
+    environment: production
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -20,6 +20,7 @@ jobs:
 
   publish-npm:
     needs: build
+    environment: production
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -35,5 +36,5 @@ jobs:
           always-auth: true
       - run: yarn set version berry
       - run: yarn config set npmRegistryServer https://registry.npmjs.org
-      - run: yarn config set npmAuthToken $NODE_AUTH_TOKEN
+      - run: yarn config set npmAuthToken $NPM_TOKEN
       - run: yarn npm publish
