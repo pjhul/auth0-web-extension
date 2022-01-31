@@ -32,6 +32,14 @@
   "lint-staged": {
     "**/*": "prettier --write --ignore-unknown"
   },
+  "keywords": [
+    "auth0",
+    "extension",
+    "chrome extension",
+    "authentication",
+    "web extension",
+    "auth"
+  ],
   "packageManager": "yarn@3.1.1",
   "devDependencies": {
     "@rollup/plugin-commonjs": "^21.0.1",
