@@ -488,84 +488,89 @@ export default class Auth0Client {
   }
 
   private async _handleAuthorizeResponse(authResult: AuthenticationResult) {
-    const { error = '', error_description = '', state, code } = authResult;
+    try {
+      const { error = '', error_description = '', state, code } = authResult;
 
-    const transaction = this.transactionManager.get();
+      const transaction = this.transactionManager.get();
 
-    if (!transaction) {
-      throw new Error('Invalid state');
-    }
+      if (!transaction) {
+        throw new Error('Invalid state');
+      }
 
-    this.transactionManager.remove();
+      if (this.options.debug) {
+        console.log('[auth0-web-extension] Unregistering current transaction');
+      }
 
-    if (this.options.debug) {
-      console.log('[auth0-web-extension] Unregistering current transaction');
-    }
+      if (authResult.error) {
+        throw new AuthenticationError(
+          error,
+          error_description,
+          authResult.state,
+          transaction.appState
+        );
+      }
 
-    if (authResult.error) {
-      throw new AuthenticationError(
-        error,
-        error_description,
-        authResult.state,
-        transaction.appState
+      if (
+        !transaction.code_verifier ||
+        (transaction.state && transaction.state !== state)
+      ) {
+        throw new Error('Invalid state');
+      }
+
+      const tokenResult = await oauthToken({
+        ...this.customOptions,
+        audience: transaction.audience,
+        scope: transaction.scope,
+        redirect_uri: transaction.redirect_uri || this.options.redirect_uri,
+        baseUrl: this.domainUrl,
+        client_id: this.options.client_id,
+        code_verifier: transaction.code_verifier,
+        grant_type: 'authorization_code',
+        code,
+        useFormData: this.options.useFormData,
+      });
+
+      if (this.options.debug) {
+        console.log(
+          '[auth0-web-extension] Received token using code and verifier'
+        );
+      }
+
+      const decodedToken = await this._verifyIdToken(
+        tokenResult.id_token,
+        transaction.nonce
       );
+
+      await this.cacheManager.set({
+        ...tokenResult,
+        decodedToken,
+        audience: transaction.audience,
+        scope: transaction.scope,
+        ...(tokenResult.scope ? { oauthTokenScope: tokenResult.scope } : null),
+        client_id: this.options.client_id,
+      });
+
+      if (this.options.debug) {
+        console.log('[auth0-web-extension] Stored token in cache');
+      }
+
+      transaction.callback({
+        ...tokenResult,
+        decodedToken,
+        scope: transaction.scope,
+        oauthTokenScope: transaction.scope,
+        audience: transaction.audience,
+      });
+
+      return {
+        appState: transaction.appState,
+      };
+    } catch (error) {
+      const transaction = this.transactionManager.get();
+      transaction?.errorCallback(error);
+    } finally {
+      this.transactionManager.remove();
     }
-
-    if (
-      !transaction.code_verifier ||
-      (transaction.state && transaction.state !== state)
-    ) {
-      throw new Error('Invalid state');
-    }
-
-    const tokenResult = await oauthToken({
-      ...this.customOptions,
-      audience: transaction.audience,
-      scope: transaction.scope,
-      redirect_uri: transaction.redirect_uri || this.options.redirect_uri,
-      baseUrl: this.domainUrl,
-      client_id: this.options.client_id,
-      code_verifier: transaction.code_verifier,
-      grant_type: 'authorization_code',
-      code,
-      useFormData: this.options.useFormData,
-    });
-
-    if (this.options.debug) {
-      console.log(
-        '[auth0-web-extension] Received token using code and verifier'
-      );
-    }
-
-    const decodedToken = await this._verifyIdToken(
-      tokenResult.id_token,
-      transaction.nonce
-    );
-
-    await this.cacheManager.set({
-      ...tokenResult,
-      decodedToken,
-      audience: transaction.audience,
-      scope: transaction.scope,
-      ...(tokenResult.scope ? { oauthTokenScope: tokenResult.scope } : null),
-      client_id: this.options.client_id,
-    });
-
-    if (this.options.debug) {
-      console.log('[auth0-web-extension] Stored token in cache');
-    }
-
-    transaction.callback({
-      ...tokenResult,
-      decodedToken,
-      scope: transaction.scope,
-      oauthTokenScope: transaction.scope,
-      audience: transaction.audience,
-    });
-
-    return {
-      appState: transaction.appState,
-    };
   }
 
   /**
