@@ -74,7 +74,6 @@ const token = await auth0.getTokenSilently(options);
 
 1. You will **only** be able to retrieve access tokens in your background script if there is at least one instance of your service worker running.
 2. We don't yet support refresh tokens, but this should be coming soon.
-3. This package is not on npm yet, but after some of these other caveats are fixed I'll make it available.
 
 ## Support + Feedback
 
