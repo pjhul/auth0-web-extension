@@ -9,13 +9,13 @@ issue tracker.
 Using [npm](https://npmjs.org)
 
 ```sh
-npm install https://github.com/pjhul/auth0-web-extension
+npm install auth0-web-extension
 ```
 
 Using [yarn](https://yarnpkg.com)
 
 ```sh
-yarn add auth0-web-extension@https://github.com/pjhul/auth0-web-extension
+yarn add auth0-web-extension
 ```
 
 ## Create the token handler
