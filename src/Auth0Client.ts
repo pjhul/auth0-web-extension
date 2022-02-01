@@ -282,6 +282,8 @@ export default class Auth0Client {
 
     const audience = options.audience || this.options.audience || 'default';
     const scope = getUniqueScopes(this.defaultScope, this.scope, options.scope);
+    const timeoutInSeconds =
+      options.timeoutInSeconds || this.options.authorizeTimeoutInSeconds || 60;
 
     if (this.options.debug)
       console.log('[auth0-web-extension] - checking session');
@@ -289,6 +291,7 @@ export default class Auth0Client {
     await this.checkSession({
       audience,
       scope,
+      timeoutInSeconds,
     });
 
     if (this.options.debug)
@@ -697,9 +700,21 @@ export default class Auth0Client {
             console.log('[auth0-web-extension] - no hit, continuing');
         }
 
-        const authResult = this.options.useRefreshTokens
-          ? await this._getTokenUsingRefreshToken(getTokenOptions)
-          : await this._getTokenFromIFrame(getTokenOptions);
+        const timeout =
+          options.timeoutInSeconds ||
+          this.options.authorizeTimeoutInSeconds ||
+          60;
+
+        const rejectOnTimeout = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new TimeoutError()), timeout * 1000);
+        });
+
+        const authResult = await Promise.race([
+          this.options.useRefreshTokens
+            ? await this._getTokenUsingRefreshToken(getTokenOptions)
+            : await this._getTokenFromIFrame(getTokenOptions),
+          rejectOnTimeout,
+        ]);
 
         if (this.options.debug)
           console.log('[auth0-web-extension] - storing auth token in cache');
@@ -766,9 +781,6 @@ export default class Auth0Client {
 
     if (this.options.debug)
       console.log('[auth0-web-extension] - built authorize url');
-
-    const timeout =
-      options.timeoutInSeconds || this.options.authorizeTimeoutInSeconds;
 
     try {
       if (this.options.debug)

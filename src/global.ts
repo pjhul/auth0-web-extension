@@ -300,6 +300,11 @@ export interface GetUserOptions {
    * The audience that was used in the authentication request
    */
   audience?: string;
+  /**
+   * The number of seconds to wait for a response when checking
+   * session. Defaults to 60s
+   */
+  timeoutInSeconds?: number;
 }
 
 export interface GetIdTokenClaimsOptions {
