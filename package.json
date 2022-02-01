@@ -1,7 +1,7 @@
 {
   "name": "auth0-web-extension",
   "author": "Paul Hultgren <@pjhul> (https://pjhul.com)",
-  "version": "0.0.10-beta.2",
+  "version": "0.0.10-beta.3",
   "description": "A javascript library to perform authentication in a web extension with Auth0",
   "main": "dist/auth0-web-extension.production.cjs.js",
   "types": "dist/types/index.d.ts",
