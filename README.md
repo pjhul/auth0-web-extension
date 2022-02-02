@@ -4,9 +4,9 @@ Fork of auth0-spa-js to work in the service worker of web extensions in MV3.
 
 **NOTE: This library is still in pre-release and not recommended for production use yet.** I'm actively working on a
 production release, so in the meantime feel free to test this library out and raise any issues/enhacements over on the
-issue tracker.
+issue tracker. This library is evolving quite rapidly, so any feedback is truly appreciated :)
 
-![Release](https://img.shields.io/github/v/release/pjhul/auth0-web-extension)
+[![Release](https://img.shields.io/npm/v/auth0-web-extension)](https://www.npmjs.com/package/auth0-web-extension)
 [![License](https://img.shields.io/:license-mit-blue.svg?style=flat)](https://opensource.org/licenses/MIT)
 
 ## Table of Contents
@@ -36,7 +36,7 @@ yarn add auth0-web-extension
 Add the following code to your content script:
 
 ```js
-import { handleTokenRequest } from "auth0-web-extension"
+import { handleTokenRequest } from "auth0-web-extension";
 
 handleTokenRequest(<YOUR_REDIRECT_URI>);
 ```
@@ -87,6 +87,9 @@ const token = await auth0.getTokenSilently(options);
 
 1. You will **only** be able to retrieve access tokens in your background script if there is at least one instance of your service worker running.
 2. We don't yet support refresh tokens
+3. The loginWithRedirect method has been replaced with the loginWithNewTab function, which behaves in almost the exact same way except opens our /authorize url on a new tab
+4. The createAuth0Client method does NOT call checkSession like in auth0-spa-js, this is because this call is highly unreliable especially if users
+   create a client immediately when the background script starts up. Instead, we call checkSession before getUser, isAuthenticated, and getIdTokenClaims so the behaviour is nearly identical.
 
 ## How does it work?
 
