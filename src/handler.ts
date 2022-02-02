@@ -59,7 +59,7 @@ export async function handleTokenRequest(
   } else {
     let iframe: HTMLIFrameElement;
 
-    messenger.addMessageListener(message => {
+    messenger.addMessageListener(async message => {
       switch (message.type) {
         case 'auth-start':
           if (debug) {
@@ -74,6 +74,7 @@ export async function handleTokenRequest(
 
           document.body.appendChild(iframe);
           iframe.setAttribute('src', redirectUri);
+
           break;
 
         case 'auth-cleanup':

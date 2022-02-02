@@ -3,10 +3,13 @@ import {
   AuthenticationResult,
   GetTokenSilentlyOptions,
   IdToken,
+  LoginWithNewTabOptions,
 } from '../../src';
 
+import browser from 'webextension-polyfill';
 import * as utils from '../../src/utils';
 import Auth0Client from '../../src/Auth0Client';
+import Messenger from '../../src/messenger';
 
 import {
   TEST_ACCESS_TOKEN,
@@ -18,6 +21,97 @@ import {
   TEST_REFRESH_TOKEN,
   TEST_STATE,
 } from '../constants';
+
+const processDefaultLoginWithNewTabOptions = config => {
+  const defaultTokenResponseOptions = {
+    success: true,
+    response: {},
+  };
+
+  const defaultAuthorizeResponseOptions = {
+    code: TEST_CODE,
+    state: TEST_STATE,
+  };
+
+  const token = {
+    ...defaultTokenResponseOptions,
+    ...(config.token || {}),
+  };
+
+  const authorize = {
+    ...defaultAuthorizeResponseOptions,
+    ...(config.authorize || {}),
+  };
+
+  return {
+    token,
+    authorize,
+    useHash: config.useHash,
+  };
+};
+
+export const loginWithNewTabFn = (mockMessenger, mockFetch) => {
+  return async (
+    auth0,
+    options: LoginWithNewTabOptions = undefined,
+    testConfig: {
+      token?: {
+        success?: boolean;
+        response?: any;
+      };
+      authorize?: {
+        code?: string;
+        state?: string;
+        error?: string;
+        errorDescription?: string;
+      };
+      useHash?: boolean;
+    } = {
+      token: {},
+      authorize: {},
+    }
+  ) => {
+    const {
+      token,
+      authorize: { code, state, error, errorDescription },
+      useHash,
+    } = processDefaultLoginWithNewTabOptions(testConfig);
+
+    mockFetch.mockResolvedValueOnce(
+      fetchResponse(
+        token.success,
+        Object.assign(
+          {
+            id_token: TEST_ID_TOKEN,
+            refresh_token: TEST_REFRESH_TOKEN,
+            access_token: TEST_ACCESS_TOKEN,
+            expires_in: 86400,
+          },
+          token.response
+        )
+      )
+    );
+
+    return await Promise.all([
+      auth0.loginWithNewTab(options),
+      new Promise<void>(resolve =>
+        setTimeout(async () => {
+          const messenger = new Messenger();
+
+          await messenger.sendRuntimeMessage({
+            type: 'auth-result',
+            payload: {
+              code,
+              state,
+            },
+          });
+
+          resolve();
+        }, 500)
+      ),
+    ]);
+  };
+};
 
 const authorizationResponse: AuthenticationResult = {
   code: 'my_code',

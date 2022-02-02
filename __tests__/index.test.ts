@@ -1,14 +1,6 @@
 import { Auth0ClientOptions } from '../src/global';
 import * as scope from '../src/scope';
 
-// Prevent webextension-polyfill from complaining during unit tests
-// @ts-ignore
-window.chrome = {
-  runtime: {
-    id: 'testid',
-  },
-};
-
 jest.mock('../src/jwt');
 jest.mock('../src/utils');
 jest.mock('../src/api');

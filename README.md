@@ -1,8 +1,21 @@
 # auth0-web-extension
 
+Fork of auth0-spa-js to work in the service worker of web extensions in MV3.
+
 **NOTE: This library is still in pre-release and not recommended for production use yet.** I'm actively working on a
 production release, so in the meantime feel free to test this library out and raise any issues/enhacements over on the
 issue tracker.
+
+![Release](https://img.shields.io/github/v/release/pjhul/auth0-web-extension)
+[![License](https://img.shields.io/:license-mit-blue.svg?style=flat)](https://opensource.org/licenses/MIT)
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Caveats](#caveats)
+- [How does it work?](#how-does-it-work)
+- [Support + Contributing](#support--feedback)
+- [License](#license)
 
 ## Installation
 
@@ -73,7 +86,12 @@ const token = await auth0.getTokenSilently(options);
 ## Caveats
 
 1. You will **only** be able to retrieve access tokens in your background script if there is at least one instance of your service worker running.
-2. We don't yet support refresh tokens, but this should be coming soon.
+2. We don't yet support refresh tokens
+
+## How does it work?
+
+Check out this [blog post](https://pjhul.com/blog/auth0-web-extension) I wrote over on my website for a breakdown of how the library works
+as well as some of the design decisions/considerations.
 
 ## Support + Feedback
 

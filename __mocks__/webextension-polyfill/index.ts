@@ -10,6 +10,19 @@ const mockBrowser = jest.createMockFromModule<Writeable<typeof browser>>(
 
 let storage = {};
 
+mockBrowser.tabs = {
+  ...mockBrowser.tabs,
+  create: () =>
+    Promise.resolve({
+      index: 0,
+      id: 123,
+      highlighted: false,
+      active: true,
+      incognito: false,
+      pinned: false,
+    }),
+};
+
 mockBrowser.storage = {
   // TODO: Implement
   onChanged: {
@@ -71,12 +84,30 @@ mockBrowser.storage = {
   },
 };
 
-// TODO: Implement
+let listeners: Listener[] = [];
+
+mockBrowser.runtime.sendMessage = async (id, message) => {
+  for await (let listener of listeners) {
+    await listener(message, {});
+  }
+
+  return Promise.resolve();
+};
+
+type Listener = (
+  message: any,
+  sender: browser.Runtime.MessageSender
+) => Promise<any> | void;
+
 mockBrowser.runtime.onMessage = {
-  removeListener: () => {},
-  hasListener: () => false,
-  hasListeners: () => false,
-  addListener: () => {},
+  removeListener: (listener: Listener) => {
+    listeners = listeners.filter(l => l !== listener);
+  },
+  hasListener: (listener: Listener) => listeners.includes(listener),
+  hasListeners: () => listeners.length > 0,
+  addListener: (listener: Listener) => {
+    listeners = [...listeners, listener];
+  },
 };
 
 export default mockBrowser;

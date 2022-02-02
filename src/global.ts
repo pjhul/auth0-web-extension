@@ -251,7 +251,7 @@ export interface AuthorizeOptions extends BaseLoginOptions {
   code_challenge_method: string;
 }
 
-export interface RedirectLoginOptions<TAppState = any>
+export interface LoginWithNewTabOptions<TAppState = any>
   extends BaseLoginOptions {
   /**
    * The URL where Auth0 will redirect your browser to with
@@ -274,11 +274,11 @@ export interface RedirectLoginOptions<TAppState = any>
   redirectMethod?: 'replace' | 'assign';
 }
 
-export interface RedirectLoginResult<TAppState = any> {
+export interface LoginWithNewTabResult<TAppState = any> {
   /**
    * State stored when the redirect request was made
    */
-  appStat?: TAppState;
+  appState?: TAppState;
 }
 
 export interface PopupLoginOptions extends BaseLoginOptions {}
