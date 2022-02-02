@@ -69,7 +69,7 @@ export default class Messenger {
   public addMessageListener<M extends Message>(
     handler: (message: M, sender: browser.Runtime.MessageSender) => Promise<any>
   ) {
-    browser.runtime.onMessage.addListener(async (message, sender) => {
+    browser.runtime.onMessage.addListener((message, sender) => {
       if (message.source === 'auth0-web-extension') {
         return handler(message, sender);
       }

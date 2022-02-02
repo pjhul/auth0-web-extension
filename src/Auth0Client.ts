@@ -149,9 +149,9 @@ export default class Auth0Client {
 
     this.customOptions = getCustomInitialOptions(options);
 
-    this.messenger.addMessageListener(async (message, sender) => {
+    this.messenger.addMessageListener((message, sender) => {
       switch (message.type) {
-        case 'auth-result':
+        case 'auth-result': {
           if (sender.tab?.id) {
             this.messenger.sendTabMessage(sender.tab.id, {
               type: 'auth-cleanup',
@@ -164,9 +164,12 @@ export default class Auth0Client {
             );
           }
 
-          await this._handleAuthorizeResponse(message.payload);
-
-          break;
+          return new Promise<void>(resolve => {
+            this._handleAuthorizeResponse(message.payload).then(() =>
+              resolve()
+            );
+          });
+        }
 
         case 'auth-error': {
           const transaction = this.transactionManager.get();
@@ -179,7 +182,7 @@ export default class Auth0Client {
             });
           }
 
-          break;
+          return Promise.resolve();
         }
 
         case 'auth-params': {
@@ -198,7 +201,7 @@ export default class Auth0Client {
             });
           }
 
-          break;
+          return Promise.resolve();
         }
 
         default:
@@ -703,8 +706,6 @@ export default class Auth0Client {
             : await this._getTokenFromIFrame(getTokenOptions),
           rejectOnTimeout,
         ]);
-
-        console.log(authResult);
 
         // TODO: Save to cookies
 
